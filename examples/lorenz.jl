@@ -68,8 +68,13 @@ for i in 1:3
         x_max = maximum([maximum(xs_m), maximum(xs_t)])
         y_min = minimum([minimum(ys_m), minimum(ys_t)])
         y_max = maximum([maximum(ys_m), maximum(ys_t)])
-        xlims!(ax, (x_min, x_max))
-        ylims!(ax, (y_min, y_max))
+        if i < 3
+            xlims!(ax, (x_min, x_max))
+            ylims!(ax, (y_min, y_max))
+        else 
+            xlims!(ax, (-5, x_max))
+            ylims!(ax, (y_min, y_max))
+        end
     end
 
     barplot!(ax1, xs_m, ys_m, color=:purple)
