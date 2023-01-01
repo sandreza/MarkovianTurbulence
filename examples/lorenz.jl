@@ -173,7 +173,7 @@ for hi in 1:3, bin_index in 1:3
     Δholding_time = holding_time[2] - holding_time[1]
     exponential_distribution = @. (exp(-λ * (holding_time - 0.5 * Δholding_time)) - exp(-λ * (holding_time + 0.5 * Δholding_time)))
     lines!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
-    scatter!(ax, holding_time, exponential_distribution, color=:black, markersize=10, label="Exponential")
+    scatter!(ax, holding_time, exponential_distribution, color=:black, markersize=20, label="Exponential")
     axislegend(ax, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
 end
 display(fig)
