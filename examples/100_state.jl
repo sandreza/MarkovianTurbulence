@@ -8,7 +8,7 @@ data_directory = pwd() * "/data/"
 file_name = "markov_model_even_time_nstate_100.h5"
 hfile = h5open(data_directory * file_name, "r")
 
-jump_factor = 5
+jump_factor = 5 # forgot to save
 dt = read(hfile["dt"]) * read(hfile["small planet factor"]) * jump_factor
 dt_days = dt / 86400
 markov_embedding_0p5 = read(hfile["markov embedding 0p5"])
@@ -25,26 +25,42 @@ ordered_indices_2 = reverse(sortperm(length.(ht_2)))
 
 Q = generator(markov_embedding_2; dt=dt_days)
 p = steady_state(Q)
+index_ordering = reverse(sortperm(p)) # order indices by probability
+mean_holding_time = [-1 / Q[i, i] for i in eachindex(p)][index_ordering]
 entropy(p)
+connectivity_out = sum(Q .> 0, dims=1)[index_ordering]
+connectivity_in = sum(Q .> 0, dims=2)[index_ordering]
 Λ, V = eigen(Q)
 timescales = -1 ./ real.(Λ)
 ##
 # Timescales captured 
-fig = Figure(resolution=(2 * 1400, 900))
+fig = Figure(resolution=(2 * 1400, 2 * 900))
 labelsize = 40
 options = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 
 ax11 = Axis(fig[1, 1]; title="Decorrelation Timescales", ylabel="Time [days]", xlabel="Eigenvalue Index", options...)
-scatter!(ax11, 1:length(timescales)-1, timescales[1:end-1], color = :blue, markersize=20.0)
+scatter!(ax11, 1:length(timescales)-1, reverse(timescales[1:end-1]), color=:blue, markersize=20.0)
 ylims!(ax11, 0, 2)
 
 ax12 = Axis(fig[1, 2]; title="State Probabilities", ylabel="Probability", xlabel="State Index", options...)
-scatter!(ax12, reverse(sort(p)), markersize=20.0, color = :blue, label= "Empirical")
+scatter!(ax12, p[index_ordering], markersize=20.0, color=:blue, label="Empirical")
 scatter!(ax12, ones(length(p)) ./ length(p), color=:black, markersize=20.0, label="Uniform")
 axislegend(ax12, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
 ylims!(ax12, -0.01, 0.1)
 
-fig
+ax21 = Axis(fig[2, 1]; title="Connectivity", ylabel="# of States", xlabel="State Index", options...)
+scatter!(ax21, 1:length(timescales), connectivity_out, color=:blue, markersize=30.0, label = "Out")
+scatter!(ax21, 1:length(timescales), connectivity_in, color=:red, markersize=20.0, marker = :diamond, label="In")
+axislegend(ax21, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
+ylims!(ax21, 0, 101)
+
+ax22 = Axis(fig[2, 2]; title="Average Holding Time", ylabel="Time [days]", xlabel="State Index", options...)
+scatter!(ax22, 1:length(timescales), mean_holding_time, color=:blue, markersize=20.0)
+ylims!(ax22, 0, 2)
+
+display(fig)
+
+save("held_suarez_generator_properties_" * string(length(p)) * ".png", fig)
 ##
 # Holding times
 ht = ht_2
@@ -57,7 +73,7 @@ bin_index = 1 # bin index
 labelsize = 40
 options = (; xlabel="Time [days]", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 fig = Figure(resolution=(2800, 1800))
-for hi in 1:3, bin_index in [1,2, 3]
+for hi in 1:3, bin_index in [1, 2, 3]
     ax = Axis(fig[hi, bin_index]; title=index_names[hi] * " Holding Times " * ", " * string(bins[bin_index]) * " Bins", options...)
     holding_time_index = ordered_indices[hi]
 
@@ -75,4 +91,10 @@ for hi in 1:3, bin_index in [1,2, 3]
 end
 display(fig)
 
-# save("held_suarez_holding_times_100.png", fig)
+save("held_suarez_holding_times_" * string(length(p)) * ".png", fig)
+
+## 
+nval = 4
+tmpQ = ones(nval, nval) ./ (nval-1)
+tmpQ[diagind(tmpQ)] .= -1
+eigvals(tmpQ)
