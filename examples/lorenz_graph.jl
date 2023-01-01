@@ -53,9 +53,9 @@ T = @lift exp(Q * $dt)
 g = DiGraph(exp(Q))
 g_Q = DiGraph(Q)
 
-elabels = string.([Q[i] for i in 1:ne(g)])
+elabels = [string(Q[i])[1:5] for i in 1:ne(g)]
 
-elabels_T = @lift string.([$T[i] for i in 1:ne(g)])
+elabels_T = @lift ([string($T[i]) for i in 1:ne(g)])
 
 edge_color = @lift [RGBAf(cmapa[4].r, cmapa[4].g, cmapa[4].b, $T[i] / 0.44) for i in 1:ne(g)]
 edge_width = [4.0 for i in 1:ne(g)]
@@ -63,11 +63,16 @@ arrow_size = [30.0 for i in 1:ne(g)]
 node_labels = repr.(1:nv(g))
 
 # edge_color_Q = [RGBAf(cmapa[4].r, cmapa[4].g, cmapa[4].b, 1.0) for i in 1:ne(g_Q)]
+# for opacity do (:red, 0.5)
 edge_color_Q = [:red, :red, :red, :blue, :blue, :blue, :orange, :orange, :orange]
+elabels_color = edge_color_Q
+node_color = [:red, :blue, :orange]
+edge_attr = (; linestyle=[:dot, :dash, :dash, :dash, :dot, :dash, :dash, :dash, :dot])
+elabels_fontsize = 40
 edge_width_Q = [4.0 for i in 1:ne(g_Q)]
 arrow_size_Q = [30.0 for i in 1:ne(g_Q)]
 node_labels_Q = repr.(1:nv(g_Q))
-node_size = 20.0
+node_size = 30.0
 
 # obs_string = @lift("Transition Probability at time t = " * string($dt) )
 p = graphplot!(ax, g, elabels=elabels_T, edge_color=edge_color, edge_width=edge_width,
@@ -80,7 +85,9 @@ p.nlabels_offset[] = offsets
 autolimits!(ax)
 hidedecorations!(ax)
 
-p_Q = graphplot!(ax_Q, g_Q, elabels=elabels, edge_color=edge_color_Q, edge_width=edge_width_Q,
+p_Q = graphplot!(ax_Q, g_Q, elabels=elabels, elabels_color=elabels_color,
+    elabels_fontsize=elabels_fontsize, edge_color=edge_color_Q,
+    edge_width=edge_width_Q, node_color=node_color,
     arrow_size=arrow_size_Q, node_size=node_size,
     nlabels=node_labels_Q, nlabels_textsize=50.0)
 
