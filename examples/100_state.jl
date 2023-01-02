@@ -1,5 +1,5 @@
-using HDF5
-using MarkovChainHammer
+using HDF5, Statistics
+using MarkovChainHammer, LinearAlgebra, GLMakie
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, perron_frobenius
 import MarkovChainHammer.TransitionMatrix: steady_state, entropy
 import MarkovChainHammer.Utils: histogram
@@ -11,9 +11,10 @@ hfile = h5open(data_directory * file_name, "r")
 jump_factor = 5 # forgot to save
 dt = read(hfile["dt"]) * read(hfile["small planet factor"]) * jump_factor
 dt_days = dt / 86400
-markov_embedding_0p5 = read(hfile["markov embedding 0p5"])
-markov_embedding_1 = read(hfile["markov embedding 1"])
-markov_embedding_2 = read(hfile["markov embedding 2"])
+markov_embedding_0p5 = read(hfile["markov embedding 0p5"]) # L1/2
+markov_embedding_1 = read(hfile["markov embedding 1"]) # L¹
+markov_embedding_2 = read(hfile["markov embedding 2"]) # L²
+time_in_days = (0:length(markov_embedding_2)-1) .* dt_days
 
 ht_0p5 = holding_times(markov_embedding_0p5, maximum(markov_embedding_0p5); dt=dt_days)
 ht_1 = holding_times(markov_embedding_1, maximum(markov_embedding_1); dt=dt_days)
@@ -94,7 +95,20 @@ display(fig)
 save("held_suarez_holding_times_" * string(length(p)) * ".png", fig)
 
 ## 
-nval = 4
-tmpQ = ones(nval, nval) ./ (nval-1)
-tmpQ[diagind(tmpQ)] .= -1
-eigvals(tmpQ)
+# index ordered_indices_2[1] should become index 1
+# thus need to permsort to find the conversion
+conversion = sortperm(index_ordering)
+embedding_ordered = [conversion[markov_index] for markov_index in markov_embedding_2]
+##
+indices = 1:1200
+fig = Figure(resolution = (1700, 1000))
+labelsize = 40
+
+options = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
+ax = Axis(fig[1, 1]; title="Markov Chain Embedding", xlabel="Time [days]", ylabel="State Index", options...)
+scatter!(ax, time_in_days[indices], embedding_ordered[indices], color = :black)
+xlims!(ax, (0, 33))
+ylims!(ax, -1, 101)
+display(fig)
+##
+save("held_suarez_embedding_" * string(length(p)) * ".png", fig)

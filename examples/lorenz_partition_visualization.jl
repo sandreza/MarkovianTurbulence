@@ -63,4 +63,3 @@ for (i, ax) in enumerate(axs)
 end
 
 save("lorenz_partition_visualization.png", fig)
-

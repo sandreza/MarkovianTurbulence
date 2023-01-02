@@ -35,7 +35,7 @@ end
 Q = generator(markov_chain, 3; dt=dt)
 
 ##
-fig = Figure(resolution=(1500, 1000))
+fig = Figure(resolution=(2000, 1500))
 ax_Q = Axis(fig[1, 1]; title="Generator", titlesize=30)
 
 # Generator
@@ -52,7 +52,7 @@ node_size = 30.0
 edge_width_Q = [2.0 for i in 1:ne(g_Q)]
 arrow_size_Q = [20.0 for i in 1:ne(g_Q)]
 node_labels_Q = repr.(1:nv(g_Q))
-node_labels_Q = ["Right Lobe", "Origin", "Left Lobe"]
+node_labels_Q = ["Negative Lobe", "Origin", "Positive Lobe"]
 
 
 p_Q = graphplot!(ax_Q, g_Q, elabels=elabels, elabels_color=elabels_color,
@@ -85,7 +85,7 @@ for (ii, dt) in enumerate(dt_vals)
     edge_width_Q = [2.0 for i in 1:ne(g_T1)]
     arrow_size_Q = [20.0 for i in 1:ne(g_T1)]
     node_labels_Q = repr.(1:nv(g_Q))
-    node_labels_Q = ["Right Lobe", "Origin", "Left Lobe"]
+    node_labels_Q = ["Negative Lobe", "Origin", "Positive Lobe"]
 
     p_Q = graphplot!(ax_T1, g_T1, elabels=elabels, elabels_color=elabels_color,
         elabels_fontsize=elabels_fontsize, edge_color=edge_color_T1,
