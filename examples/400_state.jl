@@ -5,7 +5,7 @@ import MarkovChainHammer.TransitionMatrix: steady_state, entropy
 import MarkovChainHammer.Utils: histogram
 
 data_directory = pwd() * "/data/"
-file_name = "markov_model_even_time_nstate_100.h5"
+file_name = "markov_model_even_time_nstate_400.h5"
 hfile = h5open(data_directory * file_name, "r")
 
 jump_factor = 5 # forgot to save
@@ -15,17 +15,13 @@ markov_embedding_0p5 = read(hfile["markov embedding 0p5"]) # L1/2
 markov_embedding_1 = read(hfile["markov embedding 1"]) # L¹
 markov_embedding_2 = read(hfile["markov embedding 2"]) # L²
 markov_states = []
-for i in 1:100
+for i in 1:400
     push!(markov_states, read(hfile["markov state $i"]))
 end
 time_in_days = (0:length(markov_embedding_2)-1) .* dt_days
 
-ht_0p5 = holding_times(markov_embedding_0p5, maximum(markov_embedding_0p5); dt=dt_days)
-ht_1 = holding_times(markov_embedding_1, maximum(markov_embedding_1); dt=dt_days)
 ht_2 = holding_times(markov_embedding_2, maximum(markov_embedding_2); dt=dt_days)
 
-ordered_indices_0p5 = reverse(sortperm(length.(ht_0p5)))
-ordered_indices_1 = reverse(sortperm(length.(ht_1)))
 ordered_indices_2 = reverse(sortperm(length.(ht_2)))
 
 Q = generator(markov_embedding_2; dt=dt_days)
@@ -49,22 +45,22 @@ ylims!(ax11, 0, 2)
 
 ax12 = Axis(fig[1, 2]; title="State Probabilities", ylabel="Probability", xlabel="State Index", options...)
 scatter!(ax12, p[index_ordering], markersize=20.0, color=:blue, label="Empirical")
-scatter!(ax12, ones(length(p)) ./ length(p), color=:black, markersize=20.0, label="Uniform")
+scatter!(ax12, ones(length(p)) ./ length(p), color=(:black, 0.15), markersize=20.0, label="Uniform")
 axislegend(ax12, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
-ylims!(ax12, -0.01, 0.1)
+ylims!(ax12, -0.01, 0.05)
 
 ax21 = Axis(fig[2, 1]; title="Connectivity", ylabel="# of States", xlabel="State Index", options...)
-scatter!(ax21, 1:length(timescales), connectivity_out, color=:blue, markersize=30.0, label="Out")
-scatter!(ax21, 1:length(timescales), connectivity_in, color=:red, markersize=20.0, marker=:diamond, label="In")
+scatter!(ax21, 1:length(timescales), connectivity_out, color=(:blue, 1.0), markersize=30.0, label = "Out")
+scatter!(ax21, 1:length(timescales), connectivity_in, color=(:red, 0.5), markersize=20.0, marker = :diamond, label="In")
 axislegend(ax21, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
-ylims!(ax21, 0, 101)
+ylims!(ax21, -10, 301)
 
 ax22 = Axis(fig[2, 2]; title="Average Holding Time", ylabel="Time [days]", xlabel="State Index", options...)
 scatter!(ax22, 1:length(timescales), mean_holding_time, color=:blue, markersize=20.0)
 ylims!(ax22, 0, 2)
 
 display(fig)
-
+##
 save("held_suarez_generator_properties_" * string(length(p)) * ".png", fig)
 ##
 # Holding times
@@ -95,7 +91,7 @@ for hi in 1:3, bin_index in [1, 2, 3]
     axislegend(ax, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
 end
 display(fig)
-
+##
 save("held_suarez_holding_times_" * string(length(p)) * ".png", fig)
 
 ## 
@@ -105,14 +101,14 @@ conversion = sortperm(index_ordering)
 embedding_ordered = [conversion[markov_index] for markov_index in markov_embedding_2]
 ##
 indices = 1:1200
-fig = Figure(resolution=(1700, 1000))
+fig = Figure(resolution = (1700, 1000))
 labelsize = 40
 
 options = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 ax = Axis(fig[1, 1]; title="Markov Chain Embedding", xlabel="Time [days]", ylabel="State Index", options...)
-scatter!(ax, time_in_days[indices], embedding_ordered[indices], color=:black)
+scatter!(ax, time_in_days[indices], embedding_ordered[indices], color = :black)
 xlims!(ax, (0, 33))
-ylims!(ax, -1, 101)
+ylims!(ax, -1, 401)
 display(fig)
 ##
 save("held_suarez_embedding_" * string(length(p)) * ".png", fig)

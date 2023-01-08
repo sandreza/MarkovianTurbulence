@@ -23,7 +23,7 @@ markov_index = argmin([norm(initial_condition - markov_state) for markov_state i
 markov_chain[1] = markov_index
 for i in ProgressBar(2:iterations)
     # take one timestep forward via Runge-Kutta 4
-    state = rk4(lorenz!, timeseries[:, i-1], dt) 
+    state = rk4(lorenz!, timeseries[:, i-1], dt)
     timeseries[:, i] .= state
     # partition state space according to most similar markov state
     local markov_index = argmin([norm(state - markov_state) for markov_state in markov_states])
@@ -71,7 +71,7 @@ for i in 1:3
         if i < 3
             xlims!(ax, (x_min, x_max))
             ylims!(ax, (y_min, y_max))
-        else 
+        else
             xlims!(ax, (-5, x_max))
             ylims!(ax, (y_min, y_max))
         end
