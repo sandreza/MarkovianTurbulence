@@ -47,13 +47,13 @@ ax12 = Axis(fig[1, 2]; title="State Probabilities", ylabel="Probability", xlabel
 scatter!(ax12, p[index_ordering], markersize=20.0, color=:blue, label="Empirical")
 scatter!(ax12, ones(length(p)) ./ length(p), color=(:black, 0.15), markersize=20.0, label="Uniform")
 axislegend(ax12, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
-ylims!(ax12, -0.01, 0.05)
+ylims!(ax12, -0.001, 0.031)
 
 ax21 = Axis(fig[2, 1]; title="Connectivity", ylabel="# of States", xlabel="State Index", options...)
 scatter!(ax21, 1:length(timescales), connectivity_out, color=(:blue, 1.0), markersize=30.0, label = "Out")
 scatter!(ax21, 1:length(timescales), connectivity_in, color=(:red, 0.5), markersize=20.0, marker = :diamond, label="In")
 axislegend(ax21, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
-ylims!(ax21, -10, 301)
+ylims!(ax21, -10, 211)
 
 ax22 = Axis(fig[2, 2]; title="Average Holding Time", ylabel="Time [days]", xlabel="State Index", options...)
 scatter!(ax22, 1:length(timescales), mean_holding_time, color=:blue, markersize=20.0)

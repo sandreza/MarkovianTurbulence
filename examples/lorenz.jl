@@ -2,9 +2,7 @@ using GLMakie
 using MarkovChainHammer, MarkovianTurbulence
 
 using ProgressBars, LinearAlgebra, Statistics, Random
-using GLMakie
 
-using ProgressBars, LinearAlgebra, Statistics
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, steady_state
 import MarkovChainHammer.Utils: histogram
 
