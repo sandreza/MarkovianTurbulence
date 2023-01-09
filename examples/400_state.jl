@@ -81,7 +81,7 @@ for hi in 1:3, bin_index in [1, 2, 3]
     holding_time_limits = (0, ceil(Int, maximum(ht[holding_time_index])))
     holding_time, holding_time_probability = histogram(ht[holding_time_index]; bins=bins[bin_index], custom_range=holding_time_limits)
 
-    barplot!(ax, holding_time, holding_time_probability, color=color_choices[hi], label="Data")
+    barplot!(ax, holding_time, holding_time_probability, color=(color_choices[hi], 0.5), label="Data")
     λ = 1 / mean(ht[holding_time_index])
 
     Δholding_time = holding_time[2] - holding_time[1]

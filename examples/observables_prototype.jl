@@ -32,7 +32,7 @@ autocovariance_m = [autocovariance(observable, Q, tlist) for observable in g⃗_
 ##
 # autocorrelation 
 fig = Figure(resolution = (2000,1000))
-axis_options = (; xlabel="Time (days)", ylabel="Autocovariance", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
+axis_options = (; xlabel="Time (days)", ylabel="Autocovariance", xgridstyle=:dash, ygridstyle=:dash, ygridwidth=5, xgridwidth=5, titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 common_options = (; linewidth=5)
 for i in 1:4
     ii = (i - 1) % 2 + 1
@@ -43,7 +43,7 @@ for i in 1:4
     lines!(ax, tlist, autocovariance_t[i]; color=:black, label = "timeseries", common_options...)
     lines!(ax, tlist, autocovariance_m[i]; color=:purple, label = "markov model", common_options...)
     if i == 1
-        axislegend(ax; position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=20)
+        axislegend(ax; position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
     end
 end
 display(fig)
