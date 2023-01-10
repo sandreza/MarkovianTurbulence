@@ -30,11 +30,24 @@ for i in ProgressBar(2:iterations)
     markov_chain[i] = markov_index
 end
 
+##
+function symmetry13(state)
+    if state == 1
+        return 3
+    elseif state == 2
+        return 2
+    else
+        return 1
+    end
+end
+s_markov_chain = symmetry13.(markov_chain)
+omarkov_chain = copy(markov_chain)
+markov_chain = [omarkov_chain... s_markov_chain...]
 ## construct transition matrix
 Q = generator(markov_chain; dt=dt)
 p = steady_state(Q)
 ht = holding_times(markov_chain; dt=dt)
-
+##
 # holding times
 erlang_distributions = []
 for i in eachindex(ht)
@@ -58,20 +71,24 @@ for j in eachindex(ht), i in eachindex(ht)
 end
 ## random generator
 Qs = []
-for i in 1:10000
+for i in ProgressBar(1:1000)
     random_Q = similar(Q)
-    scaling = reshape(1 ./ rand.(erlang_distributions), (1,size(Q)[1]))
+    scaling = reshape(1 ./ rand.(erlang_distributions), (1, size(Q)[1]))
     random_Q[:] .= rand.(binomial_distributions)
     # need error handling here the same as before
-    column_sum = sum(random_Q, dims = 1)
+    column_sum = sum(random_Q, dims=1)
     random_Q .= random_Q ./ column_sum
     random_Q -= I
+    random_Q .*= scaling
     for (i, csum) in enumerate(column_sum)
         if csum == 0
-            random_Q[:, i] .= 0
+            # random_Q[:, i] .= 0 # choice 1
+            # choice 2
+            random_Q[:, i] .= 1 / (length(column_sum) - 1) / dt_days
+            random_Q[i, i] = -1 / dt_days
         end
     end
-    random_Q .*= scaling
+
     push!(Qs, random_Q)
 end
 
@@ -82,8 +99,8 @@ mean(Qs)
 ##
 Λs = eigvals.(Qs)
 ##
-distΛ2 = [real(Λ[2]) for Λ in Λs]
-distΛ3 = [real(Λ[1]) for Λ in Λs]
+distΛ2 = [1 ./ real(Λ[1]) for Λ in Λs]
+distΛ3 = [1 ./ real(Λ[end-1]) for Λ in Λs]
 x2, y2 = histogram(distΛ2, bins = 10)
 x3, y3 = histogram(distΛ3, bins= 10)
 fig = Figure() 
@@ -91,4 +108,14 @@ ax1 = Axis(fig[1,1])
 ax2 = Axis(fig[1, 2])
 barplot!(ax1, x2, y2, color = :blue)
 barplot!(ax2, x3, y3, color=:blue)
+display(fig)
+
+##
+fig = Figure() 
+ax = Axis(fig[1,1])
+ylims!(ax, 0, 4)
+N = 100 # N is at most 100
+for i in 1:N
+    scatter!(ax, -1 ./ real(Λs[i]), color = (:black, 1))
+end
 display(fig)
