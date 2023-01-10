@@ -82,10 +82,11 @@ for i in ProgressBar(1:1000)
     random_Q .*= scaling
     for (i, csum) in enumerate(column_sum)
         if csum == 0
-            # random_Q[:, i] .= 0 # choice 1
+            # choice 1
+            # random_Q[:, i] .= 0 
             # choice 2
-            random_Q[:, i] .= 1 / (length(column_sum) - 1) / dt_days
-            random_Q[i, i] = -1 / dt_days
+            random_Q[:, i] .= 1 / (length(column_sum) - 1) / dt
+            random_Q[i, i] = -1 / dt
         end
     end
 
