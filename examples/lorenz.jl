@@ -11,7 +11,7 @@ markov_states = fixed_points
 
 initial_condition = [14.0, 20.0, 27.0]
 dt = 0.005
-iterations = 10^7
+iterations = 2*10^7
 
 timeseries = zeros(3, iterations)
 markov_chain = zeros(Int, iterations)

@@ -19,7 +19,7 @@ markov_chain = Int64[]
 initial_condition = [14.0, 20.0, 27.0]
 push!(timeseries, initial_condition)
 dt = 0.005
-iterations = 10^7
+iterations = 2*10^7
 
 markov_index = argmin([norm(initial_condition - markov_state) for markov_state in markov_states])
 push!(markov_chain, markov_index)

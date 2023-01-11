@@ -69,4 +69,68 @@ function autocorrelation(g⃗, Q, timelist)
     return autocor
 end
 
+export RandomGeneratorMatrix
+using MarkovChainHammer.TransitionMatrix: generator, holding_times, steady_state, count_operator
+using Distributions, LinearAlgebra
+struct RandomGeneratorMatrix{S,T,V}
+    dt::S
+    erlang_distributions::T
+    binomial_distributions::V
+end
+
+function RandomGeneratorMatrix(markov_chain, number_of_states; dt=1)
+    ht = holding_times(markov_chain, number_of_states; dt=dt)
+    erlang_distributions = Erlang{Float64}[]
+    for i in eachindex(ht)
+        ht_local = ht[i]
+        if length(ht) == 0
+            push!(erlang_distributions, Erlang(1, 0))
+        end
+        push!(erlang_distributions, Erlang(length(ht_local), mean(ht_local) / length(ht_local)))
+    end
+    # off-diagonal probabilities 
+    count_matrix = count_operator(markov_chain, number_of_states)
+    count_matrix = count_matrix - Diagonal(count_matrix)
+    Ntotes = sum(count_matrix, dims=1)
+    pmatrix = count_matrix ./ Ntotes
+    binomial_distributions = Binomial{Float64}[]
+    for j in eachindex(ht), i in eachindex(ht)
+        if Ntotes[i] == 0
+            push!(binomial_distributions, Binomial(1, 0))
+        end
+        push!(binomial_distributions, Binomial(Ntotes[j], pmatrix[i, j]))
+    end
+    return RandomGeneratorMatrix(dt, erlang_distributions, binomial_distributions)
+end
+
+RandomGeneratorMatrix(markov_chain; dt=1) = RandomGeneratorMatrix(markov_chain, maximum(markov_chain); dt=dt)
+
+import Base: rand
+function rand(Q::RandomGeneratorMatrix)
+    (; dt, erlang_distributions, binomial_distributions) = Q
+    n_states = length(erlang_distributions)
+    random_Q = zeros(n_states, n_states)
+    scaling = reshape(1 ./ rand.(erlang_distributions), (1, n_states))
+    random_Q[:] .= rand.(binomial_distributions)
+    # need error handling here the same as before
+    column_sum = sum(random_Q, dims=1)
+    random_Q .= random_Q ./ column_sum
+    random_Q -= I
+    random_Q .*= scaling
+    # error handling
+    for (i, csum) in enumerate(column_sum)
+        if csum == 0
+            # choice 1
+            # random_Q[:, i] .= 0 
+            # choice 2
+            random_Q[:, i] .= 1 / (length(column_sum) - 1) / dt
+            random_Q[i, i] = -1 / dt
+        end
+    end
+    return random_Q
+end
+
+rand(Q::RandomGeneratorMatrix, N::Int) = [rand(Q) for i in 1:N]
+
+
 end # module MarkovianTurbulence
