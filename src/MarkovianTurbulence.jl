@@ -81,24 +81,36 @@ end
 function RandomGeneratorMatrix(markov_chain, number_of_states; dt=1)
     ht = holding_times(markov_chain, number_of_states; dt=dt)
     erlang_distributions = Erlang{Float64}[]
-    for i in eachindex(ht)
+    for i in 1:number_of_states
         ht_local = ht[i]
-        if length(ht) == 0
+        if length(ht_local) == 0
             push!(erlang_distributions, Erlang(1, 0))
+        else
+            push!(erlang_distributions, Erlang(length(ht_local), mean(ht_local) / length(ht_local)))
         end
-        push!(erlang_distributions, Erlang(length(ht_local), mean(ht_local) / length(ht_local)))
     end
     # off-diagonal probabilities 
     count_matrix = count_operator(markov_chain, number_of_states)
     count_matrix = count_matrix - Diagonal(count_matrix)
     Ntotes = sum(count_matrix, dims=1)
     pmatrix = count_matrix ./ Ntotes
+    # NEED ERROR HANDLING HERE, NEED BETTER ERROR HANDLING
+    for (i, csum) in enumerate(Ntotes)
+        if csum == 0
+            # choice 1
+            # random_Q[:, i] .= 0 
+            # choice 2
+            pmatrix[:, i] .= 0
+            pmatrix[i, i] = 1.0
+        end
+    end
     binomial_distributions = Binomial{Float64}[]
-    for j in eachindex(ht), i in eachindex(ht)
+    for j in 1:number_of_states, i in 1:number_of_states
         if Ntotes[i] == 0
             push!(binomial_distributions, Binomial(1, 0))
+        else
+            push!(binomial_distributions, Binomial(Ntotes[j], pmatrix[i, j]))
         end
-        push!(binomial_distributions, Binomial(Ntotes[j], pmatrix[i, j]))
     end
     return RandomGeneratorMatrix(dt, erlang_distributions, binomial_distributions)
 end
