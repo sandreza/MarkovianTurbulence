@@ -75,19 +75,30 @@ end
 ##
 fig = Figure(resolution=(3000, 1500))
 labelsize = 40
-options = (; xlabel=" ", ylabel="probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
+options = (; xlabel=" ", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 titlenames = ["Q₁₁", "Q₂₁", "Q₃₁", "Q₁₂", "Q₂₂", "Q₃₂", "Q₁₃", "Q₂₃", "Q₃₃"]
-
+# https://docs.makie.org/v0.19/api/index.html#Axis 
+# https://juliagraphics.github.io/Colors.jl/latest/namedcolors/
+spine_colors = [:red, :blue, :orange]
+time_pdf_colors = [:blue, :orange, :black, :red]
+time_pdf_colors = [:cyan4, :darkslateblue, :gold4, :black]
+time_pdf_labels = ["T=100", "T=1000", "T=10000", "T=100000"]
+opacities =[0.75, 0.75, 0.75, 0.75] .* 0.75
 axs = []
 for i in 1:9
     ii = (i - 1) % 3 + 1
     jj = (i - 1) ÷ 3 + 1
-    ax = Axis(fig[ii, jj]; title=titlenames[i], options...)
+    # change spine colors
+    spinecolor = (; bottomspinecolor = spine_colors[jj], topspinecolor = spine_colors[jj], leftspinecolor = spine_colors[jj], rightspinecolor = spine_colors[jj])
+    othercolor = (; titlecolor = spine_colors[jj], xgridcolor = spine_colors[jj], ygridcolor = spine_colors[jj], xtickcolor = spine_colors[jj], ytickcolor = spine_colors[jj], xticklabelcolor = spine_colors[jj], yticklabelcolor = spine_colors[jj])
+    ax = Axis(fig[ii, jj]; title=titlenames[i], othercolor..., spinewidth = 5,  spinecolor..., options..., xgridvisible = false, ygridvisible = false)
     push!(axs, ax)
-    barplot!(ax, xys[i][1]..., color=(:blue, 0.75), label="T=100")
-    barplot!(ax, xys[i][2]..., color=(:orange, 0.75), label="T=1000")
-    barplot!(ax, xys[i][3]..., color=(:black, 0.75), label="T=10000")
-    barplot!(ax, xys[i][4]..., color=(:red,   0.75), label="T=100000")
+    for j in 1:4
+        barplot!(ax, xys[i][j]..., color=(time_pdf_colors[j], opacities[j]), label=time_pdf_labels[j], gap = 0.0)
+    end
+    if jj > 1 
+        hideydecorations!(ax)
+    end
     ylims!(ax, (-0.001, 0.1))
 end
 
@@ -97,7 +108,7 @@ xlims!(axs[3], (0.4, 0.85))
 xlims!(axs[4], (1.0, 2.75))
 xlims!(axs[5], (-6, -3))
 xlims!(axs[6], (1.5, 3.5))
-xlims!(axs[7], (0.5, 1.2))
+xlims!(axs[7], (0.4, 1.2))
 xlims!(axs[8], (0.4, 1.1))
 xlims!(axs[9], (-2.25, -0.9))
 
