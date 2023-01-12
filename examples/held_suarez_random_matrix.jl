@@ -46,7 +46,7 @@ Q10s = rand(Q10, Nrandom_arrays)
 Q100s = rand(Q100, Nrandom_arrays)
 Q2_p1s = rand(Q2_p1, Nrandom_arrays)
 Q2_p2s = rand(Q2_p2, Nrandom_arrays)
-toc = time() 
+toc = time()
 println("The amount of time in minutes to generate the random arrays are $( (toc - tic) / 60)")
 Q̅ = mean(Q1s)
 p̅ = steady_state(Q̅)
@@ -54,7 +54,7 @@ p̅ = steady_state(Q̅)
 Qs = [Q100s, Q10s, Q2_p1s, Q2_p2s]
 # Q1s, 
 ##
-observables = [Q -> -1/Q[i,i] for i in 1:9]
+observables = [Q -> -1 / Q[i, i] for i in 1:9]
 obs = [observable.(Q) for observable in observables, Q in Qs]
 best_empirical = [observable(Q) for observable in observables]
 ##
@@ -76,7 +76,7 @@ spine_colors = [:red, :blue, :orange]
 time_pdf_colors = [:blue, :orange, :black, :red]
 time_pdf_colors = [:gray, :maroon, :gold4, :dodgerblue]
 time_pdf_labels = ["1 year", "10 year", "50 year (part 1)", "50 year (part 2)"]
-opacities = [0.75, 0.75, 0.75, 0.75]  .* 0.75
+opacities = [0.75, 0.75, 0.75, 0.75] .* 0.75
 axs = []
 for i in 1:9
     ii = (i - 1) % 3 + 1
@@ -90,11 +90,66 @@ for i in 1:9
         barplot!(ax, xys[i][j]..., color=(time_pdf_colors[j], opacities[j]), label=time_pdf_labels[j], gap=0.0)
     end
     if jj > 1
-        # hideydecorations!(ax)
+        hideydecorations!(ax)
     end
-    xlims!(ax, (0, 3))
+    xlims!(ax, (0.25, 3))
     ylims!(ax, (0, 0.03))
 end
 axislegend(axs[5], position=:rt, framecolor=(:grey, 0.5), patchsize=(30, 30), markersize=100, labelsize=40)
-ylims!(axs[2], (0, 0.03))
 display(fig)
+##
+save("held_suarez_random_entries.png", fig)
+
+##
+eigenvalue_indices = 1:2:18
+Qs = [Q2_p1s, Q2_p2s]
+observables = [Q -> -1 / real(eigvals(Q)[end-i]) for i in eigenvalue_indices]
+tic = time()
+obs = [observable.(Q[1:1000]) for observable in observables, Q in Qs]
+toc = time() 
+println("the amount of time spent is ", toc - tic)
+best_empirical = [observable(Q) for observable in observables]
+##
+Nbins = 20
+xys = []
+p = 0.001
+for i in 1:9
+    xrange = quantile.(Ref([obs[i, 1]..., obs[i, 2]...]), (p*0.1, 1-p))
+    xy = [histogram(obs[i, j], bins=Nbins, custom_range=xrange) for j in eachindex(Qs)]
+    push!(xys, xy)
+end
+##
+fig = Figure(resolution=(3000, 1500))
+labelsize = 40
+options = (; xlabel=" ", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
+titlenames = ["-1 / real(λᵢ) for i=" * string(i+1) for i in eigenvalue_indices ]
+# https://docs.makie.org/v0.19/api/index.html#Axis 
+# https://juliagraphics.github.io/Colors.jl/latest/namedcolors/
+time_pdf_colors = [:gold4, :dodgerblue]
+time_pdf_labels = ["50 year (part 1)", "50 year (part 2)"]
+opacities = [0.75, 0.75] .* 0.75
+axs = []
+for i in 1:9
+    ii = (i - 1) % 3 + 1
+    jj = (i - 1) ÷ 3 + 1
+    # change spine colors
+    spinecolor = (; bottomspinecolor=spine_colors[jj], topspinecolor=spine_colors[jj], leftspinecolor=spine_colors[ii], rightspinecolor=spine_colors[ii])
+    othercolor = (; titlecolor=spine_colors[jj], xgridcolor=spine_colors[jj], ygridcolor=spine_colors[jj], xtickcolor=spine_colors[jj], ytickcolor=spine_colors[jj], xticklabelcolor=spine_colors[jj], yticklabelcolor=spine_colors[jj])
+    ax = Axis(fig[ii, jj]; title=titlenames[i], spinewidth=10, options..., xgridvisible=false, ygridvisible=false)
+    push!(axs, ax)
+    for j in 1:2
+        barplot!(ax, xys[i][j]..., color=(time_pdf_colors[j], opacities[j]), label=time_pdf_labels[j], gap=0.0)
+    end
+    if jj > 1
+        hideydecorations!(ax)
+    end
+    # xlims!(ax, (0.25, 3))
+    # ylims!(ax, (0, 0.03))
+end
+for i in 4:9 
+    xlims!(axs[i], (1.1, 1.9))
+end
+axislegend(axs[5], position=:rt, framecolor=(:grey, 0.5), patchsize=(30, 30), markersize=100, labelsize=40)
+display(fig)
+##
+save("held_suarez_eigenvalue_scales.png", fig)
