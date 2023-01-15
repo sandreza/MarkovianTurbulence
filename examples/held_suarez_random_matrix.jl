@@ -5,7 +5,7 @@ import MarkovChainHammer.TransitionMatrix: steady_state, entropy
 import MarkovChainHammer.Utils: histogram
 
 data_directory = pwd() * "/data/"
-nstates = 400
+nstates = 100
 file_name = "markov_model_even_time_nstate_" * string(nstates) * ".h5"
 hfile = h5open(data_directory * file_name, "r")
 
@@ -21,14 +21,14 @@ index_ordering = reverse(sortperm(unordered_p)) # order indices by probability
 ordering_operator = sortperm(index_ordering)
 markov_chain = [ordering_operator[unordered_markov_chain[i]] for i in eachindex(unordered_markov_chain)]
 Q = generator(markov_chain; dt=dt_days)
-mean_holding_time = [-1 / Q[i, i] for i in eachindex(p)]
+mean_holding_time = [-1 / Q[i, i] for i in eachindex(unordered_p)]
 p = steady_state(Q)
 entropy(p)
 connectivity_out = sum(Q .> 0, dims=1)
 connectivity_in = sum(Q .> 0, dims=2)
 Λ, V = eigen(Q)
 timescales = -1 ./ real.(Λ)
-
+##
 Nfull = floor(Int, length(markov_chain))
 N2 = floor(Int, Nfull / 2)
 N10 = floor(Int, Nfull / 10)
@@ -68,7 +68,7 @@ end
 ##
 fig = Figure(resolution=(3000, 1500))
 labelsize = 40
-options = (; xlabel=" ", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
+options = (; xlabel="Days", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 titlenames = ["1/Q₁₁", "1/Q₂₂", "1/Q₃₃", "1/Q₄₄", "1/Q₅₅", "1/Q₆₆", "1/Q₇₇", "1/Q₈₈", "1/Q₉₉"]
 # https://docs.makie.org/v0.19/api/index.html#Axis 
 # https://juliagraphics.github.io/Colors.jl/latest/namedcolors/
@@ -98,30 +98,40 @@ end
 axislegend(axs[5], position=:rt, framecolor=(:grey, 0.5), patchsize=(30, 30), markersize=100, labelsize=40)
 display(fig)
 ##
-save("held_suarez_random_entries.png", fig)
+save("held_suarez_random_entries_n"*string(nstates)*".png", fig)
 
 ##
 eigenvalue_indices = 1:2:18
 Qs = [Q2_p1s, Q2_p2s]
 observables = [Q -> -1 / real(eigvals(Q)[end-i]) for i in eigenvalue_indices]
 tic = time()
-obs = [observable.(Q[1:1000]) for observable in observables, Q in Qs]
+obs = [observable.(Q) for observable in observables, Q in Qs]
 toc = time() 
 println("the amount of time spent is ", toc - tic)
 best_empirical = [observable(Q) for observable in observables]
 ##
-Nbins = 20
+Nbins = 200
 xys = []
-p = 0.001
+p = 0.0001
 for i in 1:9
-    xrange = quantile.(Ref([obs[i, 1]..., obs[i, 2]...]), (p*0.1, 1-p))
+    xrange = quantile.(Ref([obs[i, 1]..., obs[i, 2]...]), (0, 1))
+    if nstates > 100
+        if i >3 
+            xrange = (1.1, 1.9)
+        end  
+    else 
+        if i > 5 
+            # xrange = (1.1, 1.3)
+        end
+    end
+
     xy = [histogram(obs[i, j], bins=Nbins, custom_range=xrange) for j in eachindex(Qs)]
     push!(xys, xy)
 end
 ##
 fig = Figure(resolution=(3000, 1500))
 labelsize = 40
-options = (; xlabel=" ", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
+options = (; xlabel="Days", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 titlenames = ["-1 / real(λᵢ) for i=" * string(i+1) for i in eigenvalue_indices ]
 # https://docs.makie.org/v0.19/api/index.html#Axis 
 # https://juliagraphics.github.io/Colors.jl/latest/namedcolors/
@@ -146,10 +156,26 @@ for i in 1:9
     # xlims!(ax, (0.25, 3))
     # ylims!(ax, (0, 0.03))
 end
+# xlims!(axs[i], (1.1, 1.9))
+#=
 for i in 4:9 
     xlims!(axs[i], (1.1, 1.9))
 end
+=#
 axislegend(axs[5], position=:rt, framecolor=(:grey, 0.5), patchsize=(30, 30), markersize=100, labelsize=40)
 display(fig)
 ##
-save("held_suarez_eigenvalue_scales.png", fig)
+
+save("held_suarez_eigenvalue_scales_n"*string(nstates)*".png", fig)
+
+#=
+saving observables
+using HDF5
+hfile = h5open("data/held_suarez_eigenvalue_observable_save.h5", "w")
+matrix_observables = zeros(size(obs)..., size(obs[1])...)
+for i in 1:9, j in 1:2 
+    matrix_observables[i, j, :] .= obs[i,j]
+end
+hfile["observables"] = matrix_observables 
+close(hfile)
+=#

@@ -17,14 +17,18 @@ timeseries = zeros(3, iterations)
 markov_chain = zeros(Int, iterations)
 timeseries[:, 1] .= initial_condition
 
-markov_index = argmin([norm(initial_condition - markov_state) for markov_state in markov_states])
+function markov_embedding(state; markov_states = markov_states)
+    return argmin([norm(state - markov_state) for markov_state in markov_states])
+end
+
+markov_index = markov_embedding(initial_condition)
 markov_chain[1] = markov_index
 for i in ProgressBar(2:iterations)
     # take one timestep forward via Runge-Kutta 4
     state = rk4(lorenz!, timeseries[:, i-1], dt)
     timeseries[:, i] .= state
     # partition state space according to most similar markov state
-    local markov_index = argmin([norm(state - markov_state) for markov_state in markov_states])
+    local markov_index = markov_embedding(state)
     markov_chain[i] = markov_index
 end
 
@@ -86,7 +90,7 @@ display(hfig)
 save("lorenz_histogram.png", hfig)
 
 ## Lorenz autocorrelations
-perron_frobenius = exp(Q * dt)
+perron_frobenius_1 = exp(Q * dt)
 auto_fig = Figure(resolution=(3000, 2000))
 xfig = auto_fig[1, 1] = GridLayout()
 yfig = auto_fig[2, 1] = GridLayout()
@@ -102,21 +106,24 @@ colors = [:red, :blue, :orange]
 labels = ["x", "y", "z"]
 reaction_coordinates = [u -> u[i] for i in 1:3] # define anonymous functions for reaction coordinates
 
-labels = [labels..., "x > 0", "y > 0", "z > 5"]
-reaction_coordinates = [reaction_coordinates..., u -> u[1] > 0, u -> u[2] > 0, u -> u[3] > 5]
+# labels = [labels..., "x > 0", "y > 0", "z > 5"]
+# reaction_coordinates = [reaction_coordinates..., u -> u[1] > 0, u -> u[2] > 0, u -> u[3] > 5]
+labels = [labels..., "ℰ(s)==1", "x < 0", "ℰ(s)==2"]
+reaction_coordinates = [reaction_coordinates..., u -> markov_embedding(u) == 1, u -> u[1] > 0, u -> markov_embedding(u) == 2]
 
 kwargs = (; ylabel="Autocorrelation", titlesize=30, ylabelsize=40,
     xgridstyle=:dash, ygridstyle=:dash, ygridwidth=5, xgridwidth=5, xtickalign=1,
     xticksize=20, ytickalign=1, yticksize=20, xlabel="Time",
     xticklabelsize=40, yticklabelsize=40, xlabelsize=40)
 
-
+axs = []
 for i in ProgressBar(1:6)
     current_reaction_coordinate = reaction_coordinates[i]
     subfig = subfigs[i]
 
     markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states]
-    rtimeseries = [current_reaction_coordinate(timeseries[:, i]) for i in 1:iterations]
+    iterations_used = floor(Int, iterations/100)
+    rtimeseries = [current_reaction_coordinate(timeseries[:, i]) for i in 1:iterations_used ]
 
     total = 800
     auto_correlation_timeseries = zeros(total)
@@ -130,10 +137,10 @@ for i in ProgressBar(1:6)
 
     markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states]
 
-    Pτ = perron_frobenius * 0 + I
+    Pτ = perron_frobenius_1 * 0 + I
     for i in 0:total-1
         auto_correlation_snapshots[i+1] = sum(markov' * Pτ * (p .* markov))
-        Pτ *= perron_frobenius
+        Pτ *= perron_frobenius_1
     end
     auto_correlation_snapshots .= auto_correlation_snapshots .- sum(markov .* p)^2
     auto_correlation_snapshots .*= 1.0 / auto_correlation_snapshots[1]
@@ -142,10 +149,14 @@ for i in ProgressBar(1:6)
     ax1 = Axis(subfig[1, 1]; title="Observable:  " * labels[i], kwargs...)
     l1 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_snapshots[:], color=:purple, label="Markov", linewidth=5)
     l2 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_timeseries[:], color=:black, label="Timeseries", linewidth=5)
-    axislegend(ax1, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
+    # axislegend(ax1, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
     display(auto_fig)
+    push!(axs, ax1)
 end
+axislegend(axs[1], position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=50)
 display(auto_fig)
+
+##
 save("lorenz_autocorrelation.png", auto_fig)
 
 ## Holding Times Figure
@@ -165,17 +176,17 @@ for hi in 1:3, bin_index in 1:3
     holding_time_limits = (0, ceil(Int, maximum(ht[holding_time_index])))
     holding_time, holding_time_probability = histogram(ht[holding_time_index]; bins=bins[bin_index], custom_range=holding_time_limits)
 
-    barplot!(ax, holding_time, holding_time_probability, color=color_choices[hi], label="Data")
+    barplot!(ax, holding_time, holding_time_probability, color=(color_choices[hi], 0.5), gap=0.0, label="Data")
     λ = 1 / mean(ht[holding_time_index])
 
     Δholding_time = holding_time[2] - holding_time[1]
     exponential_distribution = @. (exp(-λ * (holding_time - 0.5 * Δholding_time)) - exp(-λ * (holding_time + 0.5 * Δholding_time)))
     lines!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
-    scatter!(ax, holding_time, exponential_distribution, color=:black, markersize=20, label="Exponential")
+    scatter!(ax, holding_time, exponential_distribution, color=(:black, 0.5), markersize=20, label="Exponential")
     axislegend(ax, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
 end
 display(fig)
-
+##
 save("lorenz_holding_times.png", fig)
 
 ## 

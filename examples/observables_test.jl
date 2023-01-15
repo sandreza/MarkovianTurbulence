@@ -15,7 +15,8 @@ dt_days = dt * 80 / 86400
 
 time_in_days = (0:length(observables[:, 1])-1) .* dt_days
 
-scatter(observables[1:1000, 1])
+scatter(observables[1:10000, 2])
+scatter([(observables[i, 9], observables[i, 8]) for i in 1:10000], color = (:black, 0.1))
 ##
 function autocovariance(x; timesteps=length(x))
     μ = mean(x)
@@ -282,24 +283,61 @@ co = count_operator(markov_chain)
 
 tmp = co
 
-random_Q = zeros(3,3)
+random_Q = zeros(3, 3)
 λ2s = Float64[]
 λ1s = Float64[]
 for j in ProgressBar(1:1000)
     for i in 1:9
-        μ = log(1+abs(tmp[i]))
-        ii = (i-1) ÷ 3 + 1
-        p = (tmp[i]) / (1+sum(co[:, ii])) # weight by empirical probability of being in state, tmp[i] +1 or not has different effect. No observations = 0 probability vs 1 probability
-        σ = log(1 + p * 100 / sqrt(1 + abs(tmp[i])) )
+        μ = log(1 + abs(tmp[i]))
+        ii = (i - 1) ÷ 3 + 1
+        p = (tmp[i]) / (1 + sum(co[:, ii])) # weight by empirical probability of being in state, tmp[i] +1 or not has different effect. No observations = 0 probability vs 1 probability
+        σ = log(1 + p * 100 / sqrt(1 + abs(tmp[i])))
         random_Q[i] = rand(LogNormal(μ, σ))
     end
     random_Q = random_Q ./ sum(random_Q, dims=1)
-    random_Q = (random_Q-I ) / dt
+    random_Q = (random_Q - I) / dt
     λs = eigvals(random_Q)
-    push!(λ1s,λs[1])
-    push!(λ2s,λs[2])
+    push!(λ1s, λs[1])
+    push!(λ2s, λs[2])
 end
 
 hist(λ1s)
 eigvals(Q)
-std(λ1s) 
+std(λ1s)
+
+##
+tmplist = [autocovariance(randn(400), Q, tlist) for i in 1:100];
+##
+fig = Figure()
+ax = Axis(fig[1, 1])
+for i in eachindex(tmplist)
+    scatter!(ax, tmplist[i] ./ tmplist[i][1], color=(:black, 0.2))
+end
+display(fig)
+##
+dist = -1 ./ [log(tmplist[i][34] ./ tmplist[i][1]) for i in eachindex(tmplist)]
+xrange = (0, 1.5)# -1 ./ real(Λ[2]) * tlist[34], real(Λ[end-1] * tlist[34])
+xm, ym = histogram(dist, bins=10, custom_range=xrange)
+xm2, ym2 = histogram(-1 ./ real.(Λ[1:end-1]), bins=10, custom_range=xrange)
+fig = Figure()
+ax = Axis(fig[1, 1])
+barplot!(ax, xm, ym, color=(:red, 0.5))
+barplot!(ax, xm2, ym2, color=(:blue, 0.5))
+xlims!(ax, xrange)
+display(fig)
+
+##
+
+index = 200 # argmin(p)
+tmplist2 = markov_chain .== index
+
+tmplist_autocovariance = autocovariance(tmplist2; timesteps=length(tlist))
+tt = zeros(400)
+tt[index] = 1
+tmplist_autocovariance2 = autocovariance(tt, Q, tlist)
+
+fig = Figure() 
+ax = Axis(fig[1, 1])
+lines!(tlist, tmplist_autocovariance)
+lines!(tlist, tmplist_autocovariance2)
+display(fig)

@@ -41,19 +41,22 @@ function autocorrelation(x; timesteps=length(x))
     return autocor ./ μ^2
 end
 
-function autocovariance(g⃗, Q, timelist)
+function autocovariance(g⃗, Q::Eigen, timelist)
     autocov = zeros(length(timelist))
     # Q  = V Λ V⁻¹
-    Λ, V = eigen(Q)
-    p = steady_state(Q)
+    Λ, V = Q
+    p = real.(V[:, end] ./ sum(V[:, end]))
     v1 = V \ (p .* g⃗)
     w1 = g⃗' * V
     μ = sum(p .* g⃗)
-    for i in ProgressBar(eachindex(timelist))
-        autocov[i] = real(w1 * (exp.(Λ .* tlist[i]) .* v1)) - μ^2
+    for i in eachindex(timelist)
+        autocov[i] = real(w1 * (exp.(Λ .* timelist[i]) .* v1)) - μ^2
     end
     return autocov
 end
+
+autocovariance(g⃗, Q, timelist) = autocovariance(g⃗, eigen(Q), timelist)
+
 
 function autocorrelation(g⃗, Q, timelist)
     autocor = zeros(length(timelist))

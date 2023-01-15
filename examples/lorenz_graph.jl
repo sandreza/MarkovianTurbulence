@@ -39,7 +39,7 @@ fig = Figure(resolution=(2000, 1500))
 ax_Q = Axis(fig[1, 1]; title="Generator", titlesize=30)
 
 # Generator
-g_Q = DiGraph(Q)
+g_Q = DiGraph(Q')
 edge_color_Q = [:red, :red, :red, :blue, :blue, :blue, :orange, :orange, :orange]
 elabels = [string(Q[i])[1:5] for i in 1:ne(g_Q)]
 elabels_color = edge_color_Q
@@ -76,7 +76,7 @@ for (ii, dt) in enumerate(dt_vals)
     i = (ii) ÷ 2 + 1
     ax_T1 = Axis(fig[i, j]; title="Transfer Operator for t = " * dt_strings[ii], titlesize=30)
     T1 = exp(Q * dt)
-    g_T1 = DiGraph(T1)
+    g_T1 = DiGraph(T1') # need transpose because of how graphplot works
     elabels = [string(T1[i])[1:5] for i in 1:ne(g_T1)]
     edge_color_T1 = [(edge_color, T1[i] / 0.5) for (i, edge_color) in enumerate(edge_color_Q)]
     elabels_color = edge_color_Q

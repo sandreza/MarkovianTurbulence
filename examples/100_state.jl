@@ -24,6 +24,8 @@ ht_0p5 = holding_times(markov_embedding_0p5, maximum(markov_embedding_0p5); dt=d
 ht_1 = holding_times(markov_embedding_1, maximum(markov_embedding_1); dt=dt_days)
 ht_2 = holding_times(markov_embedding_2, maximum(markov_embedding_2); dt=dt_days)
 
+markov_state = markov_embedding_2
+
 ordered_indices_0p5 = reverse(sortperm(length.(ht_0p5)))
 ordered_indices_1 = reverse(sortperm(length.(ht_1)))
 ordered_indices_2 = reverse(sortperm(length.(ht_2)))

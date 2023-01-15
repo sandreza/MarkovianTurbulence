@@ -18,7 +18,7 @@ time_in_days = (0:length(observables[:, 1])-1) .* dt_days
 ##
 indexchoices = [2, 3, 4, 5]
 observable_function(x; indexchoice) = x[1, 1, indexchoice]
-g⃗_t = [observables[1:end, indexchoice+6] for indexchoice in indexchoices]
+g⃗_t = [observables[1:end, indexchoice+6]  for indexchoice in indexchoices]
 g⃗_m = [observable_function.(markov_states; indexchoice=indexchoice) for indexchoice in indexchoices]
 
 μ⃗_t = mean.(g⃗_t)
@@ -32,6 +32,7 @@ autocovariance_m = [autocovariance(observable, Q, tlist) for observable in g⃗_
 ##
 # autocorrelation 
 fig = Figure(resolution = (2000,1000))
+labelsize = 40
 axis_options = (; xlabel="Time (days)", ylabel="Autocovariance", xgridstyle=:dash, ygridstyle=:dash, ygridwidth=5, xgridwidth=5, titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 common_options = (; linewidth=5)
 for i in 1:4
@@ -48,15 +49,15 @@ for i in 1:4
 end
 display(fig)
 ##
-save("held_suarez_autocovariance.png", fig)
+save("held_suarez_autocovariance_n" * string(nstates) * ".png", fig)
 
 ##
 # steady state 
 labelsize = 40
 options = (; xlabel="Observable", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 fig = Figure(resolution=(2500, 1250))
-observable_timeseries = g⃗_t[3]
-observabe_steady_state = g⃗_m[3]
+observable_timeseries = g⃗_t[4]
+observabe_steady_state = g⃗_m[4]
 
 bin_options = [5, 10, 20, 400]
 for (i, bins) in enumerate(bin_options)
@@ -80,4 +81,4 @@ end
 
 display(fig)
 ##
-save("held_suarez_steady_state.png", fig)
+save("held_suarez_steady_state_n" * string(nstates) * ".png", fig)
