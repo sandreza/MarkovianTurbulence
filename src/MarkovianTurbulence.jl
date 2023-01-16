@@ -1,5 +1,6 @@
 module MarkovianTurbulence
 
+using LinearAlgebra
 using ProgressBars
 
 export lorenz!, rk4
@@ -72,10 +73,12 @@ function autocorrelation(g⃗, Q, timelist)
     return autocor
 end
 
-export RandomGeneratorMatrix
+export RandomGeneratorMatrix, RandomGeneratorMatrix2
 using MarkovChainHammer.TransitionMatrix: generator, holding_times, steady_state, count_operator
 using Distributions, LinearAlgebra
-struct RandomGeneratorMatrix{S,T,V}
+
+abstract type AbstractRandomMatrix end
+struct RandomGeneratorMatrix{S,T,V} <: AbstractRandomMatrix
     dt::S
     erlang_distributions::T
     binomial_distributions::V
@@ -145,7 +148,75 @@ function rand(Q::RandomGeneratorMatrix)
     return random_Q
 end
 
-rand(Q::RandomGeneratorMatrix, N::Int) = [rand(Q) for i in 1:N]
+struct RandomGeneratorMatrix2{S,T,V} <: AbstractRandomMatrix
+    dt::S
+    erlang_distributions::T
+    multinomial_distributions::V
+end
+
+function RandomGeneratorMatrix2(markov_chain, number_of_states; dt=1)
+    ht = holding_times(markov_chain, number_of_states; dt=dt)
+    erlang_distributions = Erlang{Float64}[]
+    for i in 1:number_of_states
+        ht_local = ht[i]
+        if length(ht_local) == 0
+            push!(erlang_distributions, Erlang(1, 0))
+        else
+            push!(erlang_distributions, Erlang(length(ht_local), mean(ht_local) / length(ht_local)))
+        end
+    end
+    # off-diagonal probabilities 
+    count_matrix = Int.(count_operator(markov_chain, number_of_states))
+    count_matrix = count_matrix - Diagonal(count_matrix)
+    Ntotes = sum(count_matrix, dims=1)
+    pmatrix = count_matrix ./ Ntotes
+    # NEED ERROR HANDLING HERE, NEED BETTER ERROR HANDLING
+    for (i, csum) in enumerate(Ntotes)
+        if csum == 0
+            # choice 1
+            # random_Q[:, i] .= 0 
+            # choice 2
+            pmatrix[:, i] .= 0
+            pmatrix[i, i] = 1.0
+        end
+    end
+    multinomial_distributions = Multinomial{Float64}[]
+    for j in 1:number_of_states
+        push!(multinomial_distributions, Multinomial(Ntotes[j], pmatrix[:, j]))
+    end
+
+    return RandomGeneratorMatrix2(dt, erlang_distributions, multinomial_distributions)
+end
+
+RandomGeneratorMatrix2(markov_chain; dt=1) = RandomGeneratorMatrix2(markov_chain, maximum(markov_chain); dt=dt)
+
+function rand(Q::RandomGeneratorMatrix2)
+    (; dt, erlang_distributions, multinomial_distributions) = Q
+    n_states = length(erlang_distributions)
+    random_Q = zeros(n_states, n_states)
+    scaling = reshape(1 ./ rand.(erlang_distributions), (1, n_states))
+    for j in 1:n_states
+        random_Q[:, j] .= rand(multinomial_distributions[j])
+    end
+    # need error handling here the same as before
+    column_sum = sum(random_Q, dims=1)
+    random_Q .= random_Q ./ column_sum
+    random_Q -= I
+    random_Q .*= scaling
+    # error handling
+    for (i, csum) in enumerate(column_sum)
+        if csum == 0
+            # choice 1
+            # random_Q[:, i] .= 0 
+            # choice 2
+            random_Q[:, i] .= 1 / (length(column_sum) - 1) / dt
+            random_Q[i, i] = -1 / dt
+        end
+    end
+    return random_Q
+end
+
+rand(Q::AbstractRandomMatrix, N::Int) = [rand(Q) for i in 1:N]
 
 
 end # module MarkovianTurbulence
