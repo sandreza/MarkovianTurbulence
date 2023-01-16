@@ -9,6 +9,7 @@ filename = "observables_test_2.h5"
 data_directory = pwd() * "/data/"
 ofile = h5open(data_directory * filename, "r")
 observables = read(ofile["observables"])
+prognostic_observables = observables[:, 7:end]
 dt = read(ofile["dt"])
 close(ofile)
 
