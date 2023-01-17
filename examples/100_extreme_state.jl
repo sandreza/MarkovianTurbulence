@@ -41,9 +41,12 @@ time_in_days = (0:length(markov_chain)-1) .* dt_days
 close(hfile)
 
 # subnetwork markov chain 
+tlist = collect(time_in_days)[1:200] # [1:327]
+
 sub_markov_chain = copy(markov_chain)
 sub_markov_chain[markov_chain.>10] .= 11 # lump all states > 10 into one state, this corresponds to treating all non-extreme states the same
 Q_sub = generator(sub_markov_chain; dt=dt_days)
+QRandom_sub = RandomGeneratorMatrix2(sub_markov_chain; dt=dt_days)
 Ps_sub = [mean([perron_frobenius(sub_markov_chain[i:j:end], 11) for i in 1:j]) for j in 1:length(tlist)]
 P_sub = perron_frobenius(sub_markov_chain)
 p_sub = steady_state(Q_sub)
@@ -81,8 +84,6 @@ dt = read(ofile["dt"])
 close(ofile)
 Tlist = temperature2(prognostic_observables, Φ[1, 1])
 
-tlist = collect(time_in_days)[1:200] # [1:327]
-
 autocovariance_t2 = autocovariance(Tlist .> 290; timesteps=length(tlist))
 
 htextreme = holding_times((Tlist .> 290) .+ 1, 2; dt=dt_days)
@@ -91,6 +92,7 @@ stats = (; max=maximum(htextreme[2]), mean=mean(htextreme[2]), min=minimum(htext
 # perron-frobenius operator for each time t 
 Ps = [mean([perron_frobenius(markov_chain[i:j:end], nstates) for i in 1:j]) for j in 1:length(tlist)]
 ##
+import MarkovianTurbulence.autocovariance
 function autocovariance(observable, Ps::Vector{Matrix{Float64}}, steps)
     autocor = zeros(steps + 1)
     p = steady_state(Ps[1])
@@ -103,14 +105,16 @@ function autocovariance(observable, Ps::Vector{Matrix{Float64}}, steps)
     end
     return autocor
 end
+observable_m = zeros(100)
+observable_m[1:10] .= 1
+
 autocovariance_m2 = autocovariance(observable_m, Ps, length(tlist) - 1)
 autocovariance_m_sub = autocovariance(observable_m[1:11], Q_sub, tlist)
 autocovariance_m_sub2 = autocovariance(observable_m[1:11], Ps_sub, length(tlist) - 1)
 ##
 autocovariance_t = autocovariance(markov_chain .< 11; timesteps=length(tlist))
-observable_m = zeros(100)
-observable_m[1:10] .= 1
 autocovariance_m = autocovariance(observable_m, Q, tlist)
+autocovariance_m_sub = autocovariance(observable_m[1:11], Q_sub, tlist)
 autocovariance_random = autocovariance(randn(100), Q, tlist)
 autocovariance_random = autocovariance_random ./ maximum(autocovariance_random) * maximum(autocovariance_m)
 
@@ -123,7 +127,7 @@ fixmeratio = (1 / autocovariance_t2[1]) * autocovariance_t[1] # SET EQUAL TO 1 L
 options = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 ax = Axis(fig[1, 1]; title="Extreme State", titlesize=30, xlabel="τ [days]", ylabel="Autocovariance", xgridvisible=false, ygridvisible=false, options...)
 lines!(ax, tlist, autocovariance_t, color=:black, linewidth=5, label="Markov Embedding")
-lines!(ax, tlist, autocovariance_t2 * fixmeratio, color=:blue, linewidth=5, label="FIX ME LATER Timeseries")
+lines!(ax, tlist, autocovariance_t2 * fixmeratio, color=(:blue, 0.5), linewidth=20, label="FIX ME LATER Timeseries")
 scatter!(ax, tlist, autocovariance_m, color=(:purple, 0.5), markersize=20, label="Generator")
 scatter!(ax, tlist, autocovariance_m2, color=(:green, 0.5), markersize=20, label="Perron-Frobenius at each time τ")
 lines!(ax, tlist, autocovariance_random, color=:red, linewidth=5, label="Random Vector")
@@ -131,12 +135,12 @@ axislegend(ax, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), marker
 # inset
 shiftx = 400
 shifty = 500
-widthx = 300
+widthx = 400
 widthy = 300
-bboxsizes = 20
+bboxsizes = 30
 ax2 = Axis(fig, bbox=BBox(shiftx, shiftx + widthx, shifty, widthy + shifty), title="zoom", titlesize=bboxsizes * 2, xlabel="τ [days]", xlabelsize=bboxsizes, xticklabelsize=bboxsizes, xgridvisible=false, ygridvisible=false)
 endind = 20
-lines!(ax2, tlist[1:endind], autocovariance_t2[1:endind] * fixmeratio, color=:blue, linewidth=5)
+lines!(ax2, tlist[1:endind], autocovariance_t2[1:endind] * fixmeratio, color=(:blue, 0.5), linewidth=10)
 scatter!(ax2, tlist[1:endind], autocovariance_m[1:endind], color=(:purple, 0.5), markersize=20)
 scatter!(ax2, tlist[1:endind], autocovariance_m2[1:endind], color=(:green, 0.5), markersize=20)
 hideydecorations!(ax2)
@@ -145,6 +149,7 @@ hideydecorations!(ax2)
 # ax2.xticks = [-3, -2.5, -2]
 # translate!(ax2.scene, 0, 0, 100);
 display(fig)
+##
 save("held_suarez_extreme_correlation_n100.png", fig)
 
 ##
@@ -175,3 +180,67 @@ p_Q = graphplot!(ax, g_Q_sub, elabels_color=elabels_color,
 display(fig)
 ##
 save("held_suarez_extreme_graph_n100.png", fig)
+##
+
+##
+using Clustering
+
+Tmarkovchain = sub_markov_chain # (Tlist .> 290) .+ 1
+
+lag = 6
+embedding_dimension = 10
+tuple_list = []
+mclength = length(Tmarkovchain)
+embedded_chain = zeros(embedding_dimension, mclength - lag * (embedding_dimension - 1))
+for i in 1:embedding_dimension
+    index_start = lag * (i - 1) + 1
+    index_end = lag * (embedding_dimension - i)
+    embedded_chain[i, :] .= Tmarkovchain[index_start:end-index_end]
+    push!(tuple_list, (index_start, index_end))
+end
+ncluster = 200# embedding_dimension * 11
+kmeansr = kmeans(embedded_chain, ncluster)
+Q = generator(kmeansr.assignments, ncluster; dt=dt_days)
+ll, vv = eigen(Q);
+kmodes = inv(vv)
+ll
+##
+p = steady_state(Q)
+observable_m = 1 * real.(kmodes[end-12, :]) + 3.5 * real.(kmodes[end-1, :])# p .< (0.2 / ncluster)
+# sum(p[observable_m])
+autoTQ = autocovariance(kmeansr.centers[10, :], Q, tlist)
+# autoT = autocovariance(Tmarkovchain; timesteps = length(tlist))
+fig = Figure()
+ax = Axis(fig[1, 1])
+scatter!(ax, tlist, autoT, color=:red)
+scatter!(ax, tlist, autoT[1] * exp.(tlist ./ real(ll[end-1])), color=:blue)
+scatter!(ax, tlist, autoT[1] * autoTQ / autoTQ[1], color=:green)
+display(fig)
+
+##
+ht_extreme = holding_times((Tlist .> 290) .+ 1)
+simulated_chain = []
+push!(simulated_chain, 1)
+for i in ProgressBar(1:3000)
+    current_state = Int(simulated_chain[end])
+    htempirical = rand(ht_extreme[current_state])
+    for i in 1:htempirical
+        push!(simulated_chain, current_state)
+    end
+    simulated_chain = vcat(simulated_chain...)
+    if current_state == 1
+        push!(simulated_chain, 2)
+    else
+        push!(simulated_chain, 1)
+    end
+end
+
+autocor = autocovariance(simulated_chain; timesteps=length(tlist))
+##
+fig = Figure()
+ax = Axis(fig[1, 1])
+scatter!(ax, tlist, autoT, color=:red)
+scatter!(ax, tlist, autoT[1] * exp.(tlist ./ real(ll[end-1])), color=:blue)
+scatter!(ax, tlist, autoT[1] * autoTQ / autoTQ[1], color=:green)
+scatter!(ax, tlist, autoT[1] * autocor / autocor[1], color=:yellow)
+display(fig)

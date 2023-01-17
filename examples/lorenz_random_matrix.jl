@@ -8,6 +8,8 @@ import MarkovChainHammer.TransitionMatrix: generator, holding_times, steady_stat
 import MarkovChainHammer.Trajectory: generate
 import MarkovChainHammer.Utils: histogram
 
+Random.seed!(12345)
+
 fixed_points = [[-sqrt(72), -sqrt(72), 27], [0.0, 0.0, 0.0], [sqrt(72), sqrt(72), 27]]
 markov_states = fixed_points
 
@@ -42,16 +44,17 @@ function symmetry13(state)
 end
 s_markov_chain = symmetry13.(markov_chain)
 omarkov_chain = copy(markov_chain)
+sQ = generator(s_markov_chain; dt=dt)
 # markov_chain = [omarkov_chain... s_markov_chain...]
 ## construct transition matrix
 Q = generator(markov_chain; dt=dt)
 p = steady_state(Q)
 ht = holding_times(markov_chain; dt=dt)
 ##
-Q1 = RandomGeneratorMatrix(markov_chain[1:floor(Int, 2 * 10^4)], 3; dt=dt)
-Q2 = RandomGeneratorMatrix(markov_chain[floor(Int, 2 * 10^4)+1:floor(Int, 2 * 10^5)], 3; dt=dt)
-Q3 = RandomGeneratorMatrix(markov_chain[floor(Int, 2 * 10^5)+1:floor(Int, 2 * 10^6)], 3; dt=dt)
-Q4 = RandomGeneratorMatrix(markov_chain[floor(Int, 2 * 10^6)+1:floor(Int, 2 * 10^7)], 3; dt=dt)
+Q1 = RandomGeneratorMatrix2(markov_chain[1:floor(Int, 2 * 10^4)], 3; dt=dt)
+Q2 = RandomGeneratorMatrix2(markov_chain[floor(Int, 2 * 10^4)+1:floor(Int, 2 * 10^5)], 3; dt=dt)
+Q3 = RandomGeneratorMatrix2(markov_chain[floor(Int, 2 * 10^5)+1:floor(Int, 2 * 10^6)], 3; dt=dt)
+Q4 = RandomGeneratorMatrix2(markov_chain[floor(Int, 2 * 10^6)+1:floor(Int, 2 * 10^7)], 3; dt=dt)
 num_samples = 100000
 Q1s = rand(Q1, num_samples)
 Q2s = rand(Q2, num_samples)

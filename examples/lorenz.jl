@@ -11,13 +11,13 @@ markov_states = fixed_points
 
 initial_condition = [14.0, 20.0, 27.0]
 dt = 0.005
-iterations = 2*10^7
+iterations = 2 * 10^7
 
 timeseries = zeros(3, iterations)
 markov_chain = zeros(Int, iterations)
 timeseries[:, 1] .= initial_condition
 
-function markov_embedding(state; markov_states = markov_states)
+function markov_embedding(state; markov_states=markov_states)
     return argmin([norm(state - markov_state) for markov_state in markov_states])
 end
 
@@ -122,8 +122,8 @@ for i in ProgressBar(1:6)
     subfig = subfigs[i]
 
     markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states]
-    iterations_used = floor(Int, iterations/100)
-    rtimeseries = [current_reaction_coordinate(timeseries[:, i]) for i in 1:iterations_used ]
+    iterations_used = floor(Int, iterations / 100)
+    rtimeseries = [current_reaction_coordinate(timeseries[:, i]) for i in 1:iterations_used]
 
     total = 800
     auto_correlation_timeseries = zeros(total)
@@ -188,6 +188,41 @@ end
 display(fig)
 ##
 save("lorenz_holding_times.png", fig)
+
+##
+# Markov Chain Embedding 
+nsteps = 2100
+color_choices = [:red, :blue, :orange]
+colorlist = [color_choices[markov_chain[i]] for i in 1:nsteps]
+tlist = collect(0:dt:dt*(iterations-1))
+labelsize = 30
+options = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize, xgridvisible=false, ygridvisible=false)
+
+fig = Figure(resolution=(1500, 1000))
+embedding_fig = fig[2, 1] = GridLayout()
+dynamics_fig = fig[1, 1] = GridLayout()
+
+ax = Axis(embedding_fig[1, 1]; title="Markov Chain Embedding", xlabel="Time", ylabel="State", options...)
+scatter!(ax, tlist[1:nsteps], markov_chain[1:nsteps], color=colorlist)
+ax.yticks = ([1, 2, 3], ["Left Lobe", "Origin", "Right Lobe"])
+
+dynamics_labels = ["x", "y", "z"]
+axslist = []
+for i in 1:3
+    if i == 1
+        ax_x = Axis(dynamics_fig[i, 1]; title="Dynamics", xlabel="Time", ylabel=dynamics_labels[i], options...)
+    else
+        ax_x = Axis(dynamics_fig[i, 1]; xlabel="Time", ylabel=dynamics_labels[i], options...)
+    end
+    lines!(ax_x, tlist[1:nsteps], timeseries[i, 1:nsteps], color=colorlist,  linewidth = 5)
+    push!(axslist, ax_x)
+end
+hidexdecorations!(axslist[1])
+hidexdecorations!(axslist[2])
+
+display(fig)
+##
+save("lorenz_dynamics_embedding.png", fig)
 
 ## 
 ## construct ensemble and temporal averages of first and second moments

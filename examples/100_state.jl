@@ -38,7 +38,7 @@ entropy(p)
 connectivity_out = sum(Q .> 0, dims=1)[index_ordering]
 connectivity_in = sum(Q .> 0, dims=2)[index_ordering]
 Λ, V = eigen(Q)
-timescales = -1 ./ real.(Λ)
+timescales = real.(-1 ./ Λ)
 ##
 # Timescales captured 
 fig = Figure(resolution=(2 * 1400, 2 * 900))
