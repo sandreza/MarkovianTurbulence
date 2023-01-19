@@ -56,8 +56,20 @@ function autocovariance(g⃗, Q::Eigen, timelist)
     return autocov
 end
 
-autocovariance(g⃗, Q, timelist) = autocovariance(g⃗, eigen(Q), timelist)
+function autocovariance(observable, Ps::Vector{Matrix{Float64}}, steps)
+    autocor = zeros(steps + 1)
+    p = steady_state(Ps[1])
+    μ² = sum(observable .* p)^2
+    autocor[1] = observable' * (observable .* p) - μ²
+    for i in 1:steps
+        # p = steady_state(Ps[i])
+        # μ² = sum(observable .* p)^2
+        autocor[i+1] = observable' * Ps[i] * (observable .* p) - μ²
+    end
+    return autocor
+end
 
+autocovariance(g⃗, Q, timelist) = autocovariance(g⃗, eigen(Q), timelist)
 
 function autocorrelation(g⃗, Q, timelist)
     autocor = zeros(length(timelist))
@@ -218,5 +230,39 @@ end
 
 rand(Q::AbstractRandomMatrix, N::Int) = [rand(Q) for i in 1:N]
 
+
+export ContinuousTimeEmpiricalProcess, generate
+
+import MarkovChainHammer.Trajectory: next_state, generate
+
+struct ContinuousTimeEmpiricalProcess{S,T}
+    holding_times::S
+    probabilities::T # change to cumulative sum for simulation purposes
+end
+
+function ContinuousTimeEmpiricalProcess(markov_chain; number_of_states=length(union(markov_chain)))
+    ht = holding_times(markov_chain)
+    count_matrix = count_operator(markov_chain, number_of_states)
+    count_matrix = count_matrix - Diagonal(count_matrix)
+    Ntotes = sum(count_matrix, dims=1)
+    pmatrix = count_matrix ./ Ntotes
+    cP = cumsum(pmatrix, dims=1)
+    return ContinuousTimeEmpiricalProcess(ht, cP)
+end
+
+function generate(process::ContinuousTimeEmpiricalProcess, n, initial_condition)
+    simulated_chain = Int64[]
+    push!(simulated_chain, initial_condition)
+    for i in ProgressBar(1:n)
+        current_state = simulated_chain[end]
+        htempirical = rand(process.holding_times[current_state])
+        for i in 1:htempirical
+            push!(simulated_chain, current_state)
+        end
+        simulated_chain = vcat(simulated_chain...)
+        push!(simulated_chain, next_state(current_state, process.probabilities))
+    end
+    return simulated_chain
+end
 
 end # module MarkovianTurbulence

@@ -3,7 +3,7 @@ using MarkovChainHammer, MarkovianTurbulence
 
 using ProgressBars, LinearAlgebra, Statistics, Random
 
-import MarkovChainHammer.TransitionMatrix: generator, holding_times, steady_state
+import MarkovChainHammer.TransitionMatrix: generator, holding_times, steady_state, perron_frobenius
 import MarkovChainHammer.Utils: histogram
 
 fixed_points = [[-sqrt(72), -sqrt(72), 27], [0.0, 0.0, 0.0], [sqrt(72), sqrt(72), 27]]
@@ -35,6 +35,8 @@ end
 ## construct transition matrix
 Q = generator(markov_chain; dt=dt)
 p = steady_state(Q)
+## construct several transfer operators 
+Ps = [mean([perron_frobenius(markov_chain[i:j:end], 3) for i in 1:j]) for j in 10:10:800]
 ## Histogram Figure 
 hfig = Figure(resolution=(1800, 1500))
 xfig = hfig[1, 1] = GridLayout()
@@ -116,6 +118,9 @@ kwargs = (; ylabel="Autocorrelation", titlesize=30, ylabelsize=40,
     xticksize=20, ytickalign=1, yticksize=20, xlabel="Time",
     xticklabelsize=40, yticklabelsize=40, xlabelsize=40)
 
+# ctep = ContinuousTimeEmpiricalProcess(markov_chain)
+# generated_chain = generate(ctep, 10^4, markov_chain[1])
+
 axs = []
 for i in ProgressBar(1:6)
     current_reaction_coordinate = reaction_coordinates[i]
@@ -147,13 +152,20 @@ for i in ProgressBar(1:6)
 
 
     ax1 = Axis(subfig[1, 1]; title="Observable:  " * labels[i], kwargs...)
-    l1 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_snapshots[:], color=:purple, label="Markov", linewidth=5)
-    l2 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_timeseries[:], color=:black, label="Timeseries", linewidth=5)
+    l1 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_timeseries[:], color=:black, label="Timeseries", linewidth=7)
+    l2 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_snapshots[:], color=(:purple, 0.5), label="Generator", linewidth=7)
+    autocorrelation_perron_frobenius = autocovariance(markov, Ps, 79)
+    autocorrelation_perron_frobenius = autocorrelation_perron_frobenius / autocorrelation_perron_frobenius[1]
+    l3 = scatter!(ax1, dt .* collect(0:10:total-1), autocorrelation_perron_frobenius, color=(:green, 0.5), markersize=20, label="Transfer Operators")
+
+    # generated_states = [current_reaction_coordinate(markov_states[link]) for link in generated_chain]
+    # autocorrelation_generated = autocovariance(generated_states; timesteps = 800)
+    # l4 = lines!(ax1, dt .* collect(0:total-1), autocorrelation_generated / autocorrelation_generated[1], color=(:blue, 0.5), label="Model", linewidth=5)
     # axislegend(ax1, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
     display(auto_fig)
     push!(axs, ax1)
 end
-axislegend(axs[1], position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=50)
+axislegend(axs[1], position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=80, labelsize=40)
 display(auto_fig)
 
 ##
@@ -214,7 +226,7 @@ for i in 1:3
     else
         ax_x = Axis(dynamics_fig[i, 1]; xlabel="Time", ylabel=dynamics_labels[i], options...)
     end
-    lines!(ax_x, tlist[1:nsteps], timeseries[i, 1:nsteps], color=colorlist,  linewidth = 5)
+    lines!(ax_x, tlist[1:nsteps], timeseries[i, 1:nsteps], color=colorlist, linewidth=5)
     push!(axslist, ax_x)
 end
 hidexdecorations!(axslist[1])

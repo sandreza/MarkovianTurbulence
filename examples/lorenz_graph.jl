@@ -68,14 +68,16 @@ autolimits!(ax_Q)
 hidedecorations!(ax_Q)
 
 # t = 0.1 Transfer operator
-dt = 0.1
-dt_strings = ["0.1", "0.5", "2"]
+dt = 0.005
+dt_strings = ["0.1", "0.5", "1.5"]
 dt_vals = parse.(Float64, dt_strings)
-for (ii, dt) in enumerate(dt_vals)
+for (ii, τ) in enumerate(dt_vals)
     j = (ii) % 2 + 1
     i = (ii) ÷ 2 + 1
-    ax_T1 = Axis(fig[i, j]; title="Transfer Operator for t = " * dt_strings[ii], titlesize=30)
-    T1 = exp(Q * dt)
+    ax_T1 = Axis(fig[i, j]; title="Transfer Operator for τ = " * dt_strings[ii], titlesize=30)
+    skip = round(Int, τ/dt)
+    T1 = mean([perron_frobenius(markov_chain[i:skip:end], 3) for i in 1:skip])
+    # T1 = exp(Q * τ)
     g_T1 = DiGraph(T1') # need transpose because of how graphplot works
     elabels = [string(T1[i])[1:5] for i in 1:ne(g_T1)]
     edge_color_T1 = [(edge_color, T1[i] / 0.5) for (i, edge_color) in enumerate(edge_color_Q)]

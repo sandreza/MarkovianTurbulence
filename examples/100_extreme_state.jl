@@ -235,6 +235,11 @@ for i in ProgressBar(1:3000)
     end
 end
 
+ctmep = ContinuousTimeEmpiricalProcess(markov_chain)
+simulated_chain = generate(ctmep, 10000, 1)
+autosim = autocovariance(simulated_chain .== 1; timesteps = 800)
+
+
 autocor = autocovariance(simulated_chain; timesteps=length(tlist))
 ##
 fig = Figure()

@@ -1,12 +1,19 @@
 using HDF5, Statistics
 using MarkovChainHammer, LinearAlgebra, GLMakie
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, perron_frobenius
-import MarkovChainHammer.TransitionMatrix: steady_state, entropy
+import MarkovChainHammer.TransitionMatrix: count_operator, steady_state, entropy
 import MarkovChainHammer.Utils: histogram
 
 data_directory = pwd() * "/data/"
 file_name = "markov_model_even_time_nstate_400.h5"
-hfile = h5open(data_directory * file_name, "r")
+hfile1 = h5open(data_directory * file_name, "r")
+file_name = "part2_markov_model_even_time_nstate_400.h5"
+hfile2 = h5open(data_directory * file_name, "r")
+
+markov_chain = [read(hfile1["markov embedding 2"])..., read(hfile2["markov embedding 2"])...]
+
+hfile_markov = hfile1 # grab markov states from first file
+hfile = hfile1 # grab other data from the file here
 
 jump_factor = 5 # forgot to save
 dt = read(hfile["dt"]) * read(hfile["small planet factor"]) * jump_factor
@@ -16,12 +23,24 @@ markov_embedding_1 = read(hfile["markov embedding 1"]) # L¹
 markov_embedding_2 = read(hfile["markov embedding 2"]) # L²
 markov_states = []
 for i in 1:400
-    push!(markov_states, read(hfile["markov state $i"]))
+    push!(markov_states, read(hfile_markov["markov state $i"]))
 end
 time_in_days = (0:length(markov_embedding_2)-1) .* dt_days
 
-ht_2 = holding_times(markov_embedding_2, maximum(markov_embedding_2); dt=dt_days)
+straggler_proxy = sum(count_operator(markov_embedding_2), dims = 1)[:]
+straggler_list = []
+for i in 1:400
+    if straggler_proxy[i] < eps(100.0)
+        push!(straggler_list, i)
+    end
+end
 
+if length(straggler_list) > 0
+    println("Straggler states: ", straggler_list)
+    markov_embedding_2 = [markov_embedding_2..., straggler_list..., 1]
+end
+
+ht_2 = holding_times(markov_embedding_2, maximum(markov_embedding_2); dt=dt_days)
 ordered_indices_2 = reverse(sortperm(length.(ht_2)))
 
 Q = generator(markov_embedding_2; dt=dt_days)
@@ -34,6 +53,8 @@ connectivity_in = sum(Q .> 0, dims=2)[index_ordering]
 Λ, V = eigen(Q)
 timescales = real.(-1 ./ Λ)
 time_in_days = (0:length(markov_embedding_2)-1) .* dt_days
+close(hfile1)
+close(hfile2)
 ##
 # Timescales captured 
 fig = Figure(resolution=(2 * 1400, 2 * 900))
