@@ -186,7 +186,7 @@ struct GeneratorPredictiveDistributions{H,P} <: AbstractGeneratorParameterDistri
     exit_counts::P
 end
 
-function BayesianGenerator(data, prior::GeneratorPriorParameters; dt=1)
+function BayesianGenerator(data, prior::GeneratorParameterDistributions; dt=1)
     number_of_states = length(prior.mean_rates)
     ht_data = holding_times(data, number_of_states; dt=dt)
     p_data = Int.(count_operator(data, number_of_states))
@@ -212,8 +212,8 @@ function BayesianGenerator(data, prior::GeneratorPriorParameters; dt=1)
         posterior_rates[i] = Gamma(α_new, θ_new)
         # predictive posterior 
         μ = 0 # lomax
-        σ =  β_new / α_new
-        ξ = 1/α_new
+        σ = β_new / α_new
+        ξ = 1 / α_new
         predictive_holding_times[i] = GeneralizedPareto(μ, σ, ξ)
 
         # next the exit probabilities
@@ -247,8 +247,21 @@ function construct_generator(rates, exit_probabilities)
     return generator
 end
 ##
-prior = GeneratorPriorParameters(3, 1.0)
-data = markov_chain[1:100000]
+function prior_parameter_distribution(number_of_states::Int, time_rates::Float64)
+    α = 2 * time_rates
+    β = 2
+    θ = 1 / β
+    rates = [Gamma(α, θ) for i in 1:number_of_states]
+    α⃗ = ones(number_of_states - 1)
+    exit_probabilities = [Dirichlet(α⃗) for i in 1:number_of_states]
+    return GeneratorParameterDistributions(rates, exit_probabilities)
+end
+##
+number_of_states = 3
+rates = 1.0
+prior = prior_parameter_distribution(3, 1.0)
+
+data = markov_chain
 tmp = BayesianGenerator(data, prior; dt=dt)
 
 rates = mean.(tmp.posterior.mean_rates)
@@ -263,3 +276,40 @@ Q2 = generator(data, 3; dt=dt)
 Q1
 Q2
 Q3
+
+##
+import Base: rand
+function rand(Q::GeneratorParameterDistributions)
+    rates = rand.(Q.mean_rates)
+    exit_probabilities = rand.(Q.exit_probabilities)
+    return construct_generator(rates, exit_probabilities)
+end
+rand(Q::GeneratorParameterDistributions, n::Int) = [rand(Q) for i in 1:n]
+function rand(Q::GeneratorPredictiveDistributions)
+    rates = 1 ./ rand.(Q.holding_times)
+    exit_counts = rand.(Q.exit_counts)
+    exit_probabilities = [exit_counts[i] / sum(exit_counts[i]) for i in eachindex(exit_counts)]
+    return construct_generator(rates, exit_probabilities)
+end
+rand(Q::GeneratorPredictiveDistributions, n::Int) = [rand(Q) for i in 1:n]
+
+function rand(Q::BayesianGenerator)
+    return rand(Q.posterior)
+end
+rand(Q::BayesianGenerator, n::Int) = [rand(Q) for i in 1:n]
+
+rand(tmp.posterior)
+##
+posterior = tmp.posterior
+prior = tmp.prior
+Qs = mean(rand(prior, 100))
+Qs = mean(rand(posterior, 100))
+
+
+##
+Q1 = BayesianGenerator(markov_chain[1:floor(Int, 2 * 10^4)], prior; dt=dt)
+Q2 = BayesianGenerator(markov_chain[floor(Int, 2 * 10^4)+1:floor(Int, 2 * 10^5)], prior; dt=dt)
+Q3 = BayesianGenerator(markov_chain[floor(Int, 2 * 10^5)+1:floor(Int, 2 * 10^6)], prior; dt=dt)
+Q4 = BayesianGenerator(markov_chain[floor(Int, 2 * 10^6)+1:floor(Int, 2 * 10^7)], prior; dt=dt)
+
+rand(Q1)
