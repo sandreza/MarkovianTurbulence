@@ -142,7 +142,7 @@ abstract type AbstractPriorDistributionParameters end
 # probably use the same abstraction here: RENAME HOLDING TIMES TO RATES
 # GeneratorParameterDistributions and have abstract distribution parameters
 struct GeneratorPriorParameters{H,P} <: AbstractPriorDistributionParameters
-    mean_holding_times::H
+    mean_rates::H
     exit_probabilities::P
 end
 
@@ -150,15 +150,15 @@ function GeneratorPriorParameters(number_of_states::Int, inverse_time_scale::Flo
     α = 2 / inverse_time_scale
     β = 2
     θ = 1 / β
-    mean_holding_times = [Gamma(α, θ) for i in 1:number_of_states]
+    mean_rates = [Gamma(α, θ) for i in 1:number_of_states]
     α⃗ = ones(number_of_states - 1)
     exit_probabilities = [Dirichlet(α⃗) for i in 1:number_of_states]
-    return GeneratorPriorParameters(mean_holding_times, exit_probabilities)
+    return GeneratorPriorParameters(mean_rates, exit_probabilities)
 end
 
 tmp = GeneratorPriorParameters(3, 10.0)
 
-rand.(tmp.mean_holding_times)
+rand.(tmp.mean_rates)
 rand.(tmp.exit_probabilities)
 
 ## Predictive Posterior Abstraction 
@@ -176,28 +176,28 @@ abstract type AbstractGeneratorParameterDistributions end
 
 # for both the prior and the posterior
 struct GeneratorParameterDistributions{H,P} <: AbstractGeneratorParameterDistributions
-    mean_holding_times::H
+    mean_rates::H
     exit_probabilities::P
 end
 
 # account for finite sampling effects
 struct GeneratorPredictiveDistributions{H,P} <: AbstractGeneratorParameterDistributions
-    mean_holding_times::H
+    holding_times::H
     exit_counts::P
 end
 
 function BayesianGenerator(data, prior::GeneratorPriorParameters; dt=1)
-    number_of_states = length(prior.mean_holding_times)
+    number_of_states = length(prior.mean_rates)
     ht_data = holding_times(data, number_of_states; dt=dt)
     p_data = Int.(count_operator(data, number_of_states))
     p_data = p_data - Diagonal(diag(p_data))
     posterior_rates = Vector{Gamma{Float64}}(undef, number_of_states)
     posterior_exit_probabilities = Vector{Dirichlet{Float64,Vector{Float64},Float64}}(undef, number_of_states)
-    predictive_rates = Vector{GeneralizedPareto{Float64}}(undef, number_of_states)
+    predictive_holding_times = Vector{GeneralizedPareto{Float64}}(undef, number_of_states)
     predictive_exit_counts = Vector{DirichletMultinomial{Float64}}(undef, number_of_states)
     for i in 1:number_of_states
         number_of_exits = length(ht_data[i])
-        α, θ = params(prior.mean_holding_times[i])
+        α, θ = params(prior.mean_rates[i])
         # first handle the rates
         # posterior
         β = 1 / θ
@@ -212,9 +212,9 @@ function BayesianGenerator(data, prior::GeneratorPriorParameters; dt=1)
         posterior_rates[i] = Gamma(α_new, θ_new)
         # predictive posterior 
         μ = 0 # lomax
-        σ = β_new / α_new
-        ξ = 1 / α_new
-        predictive_rates[i] = GeneralizedPareto(μ, σ, ξ)
+        σ =  β_new / α_new
+        ξ = 1/α_new
+        predictive_holding_times[i] = GeneralizedPareto(μ, σ, ξ)
 
         # next the exit probabilities
         # posterior
@@ -231,7 +231,7 @@ function BayesianGenerator(data, prior::GeneratorPriorParameters; dt=1)
         predictive_exit_counts[i] = DirichletMultinomial(n, α⃗_new)
     end
     posterior = GeneratorParameterDistributions(posterior_rates, posterior_exit_probabilities)
-    predictive = GeneratorPredictiveDistributions(predictive_rates, predictive_exit_counts)
+    predictive = GeneratorPredictiveDistributions(predictive_holding_times, predictive_exit_counts)
     return BayesianGenerator(prior, data, posterior, predictive)
 end
 
@@ -248,13 +248,13 @@ function construct_generator(rates, exit_probabilities)
 end
 ##
 prior = GeneratorPriorParameters(3, 1.0)
-data = markov_chain[1:2000]
+data = markov_chain[1:100000]
 tmp = BayesianGenerator(data, prior; dt=dt)
 
-rates = mean.(tmp.posterior.mean_holding_times)
+rates = mean.(tmp.posterior.mean_rates)
 exit_probabilities = mean.(tmp.posterior.exit_probabilities)
 Q1 = construct_generator(rates, exit_probabilities)
-rates = mean.(tmp.predictive_posterior.mean_holding_times)
+rates = 1 ./ mean.(tmp.predictive_posterior.holding_times)
 exit_counts = mean.(tmp.predictive_posterior.exit_counts)
 exit_probabilities = [exit_counts[i] / sum(exit_counts[i]) for i in eachindex(exit_counts)]
 Q3 = construct_generator(rates, exit_probabilities)
