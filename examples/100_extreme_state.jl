@@ -1,4 +1,4 @@
-using HDF5, Statistics
+using HDF5, Statistics, MarkovianTurbulence
 using MarkovChainHammer, LinearAlgebra, GLMakie
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, perron_frobenius
 import MarkovChainHammer.TransitionMatrix: steady_state, entropy
@@ -6,19 +6,23 @@ import MarkovChainHammer.Utils: histogram
 
 nstates = 100
 data_directory = pwd() * "/data/"
-file_name = "markov_model_extreme_nstate_100.h5"
+file_name1 = "markov_model_extreme_nstate_100.h5"
+file_name = "p2_markov_model_even_time_nstate_100_extreme.h5"
 hfile = h5open(data_directory * file_name, "r")
+hfilegeo = h5open(data_directory * file_name1, "r")
 
 jump_factor = 5 # forgot to save
-Φ = read(hfile["geopotential"])
+Φ = read(hfilegeo["geopotential"])
 dt = read(hfile["dt"]) * read(hfile["small planet factor"]) * jump_factor
 dt_days = dt / 86400
-markov_states = typeof(read(hfile["markov state 1"]))[]
+markov_states = typeof(read(hfilegeo["markov state 1"]))[]
 for i in 1:100
-    push!(markov_states, read(hfile["markov state $i"]))
+    push!(markov_states, read(hfilegeo["markov state $i"]))
 end
 close(hfile)
-file_name = "markov_model_even_time_nstate_100_extreme.h5"
+close(hfilegeo)
+
+file_name = "p2_markov_model_even_time_nstate_100_extreme.h5"
 hfile = h5open(data_directory * file_name, "r")
 markov_chain = read(hfile["markov embedding"])
 time_in_days = (0:length(markov_chain)-1) .* dt_days
@@ -48,6 +52,7 @@ sub_markov_chain[markov_chain.>10] .= 11 # lump all states > 10 into one state, 
 Q_sub = generator(sub_markov_chain; dt=dt_days)
 QRandom_sub = RandomGeneratorMatrix2(sub_markov_chain; dt=dt_days)
 Ps_sub = [mean([perron_frobenius(sub_markov_chain[i:j:end], 11) for i in 1:j]) for j in 1:length(tlist)]
+Q2_sub = log(Ps_sub[40]) /(40 * dt_days)
 P_sub = perron_frobenius(sub_markov_chain)
 p_sub = steady_state(Q_sub)
 ht_sub = holding_times(sub_markov_chain, 11; dt=dt_days)
@@ -110,6 +115,7 @@ observable_m[1:10] .= 1
 
 autocovariance_m2 = autocovariance(observable_m, Ps, length(tlist) - 1)
 autocovariance_m_sub = autocovariance(observable_m[1:11], Q_sub, tlist)
+autocovariance_m_sub_gen2 = autocovariance(observable_m[1:11], Q2_sub, tlist)
 autocovariance_m_sub2 = autocovariance(observable_m[1:11], Ps_sub, length(tlist) - 1)
 ##
 autocovariance_t = autocovariance(markov_chain .< 11; timesteps=length(tlist))
@@ -123,13 +129,14 @@ tmpt = holding_times((markov_chain .< 11) .+ 1; dt=dt_days)
 ##
 fig = Figure(resolution=(1500, 1000))
 labelsize = 40
-fixmeratio = (1 / autocovariance_t2[1]) * autocovariance_t[1] # SET EQUAL TO 1 LATER
+fixmeratio = 1 # (1 / autocovariance_t2[1]) * autocovariance_t[1] # SET EQUAL TO 1 LATER
 options = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 ax = Axis(fig[1, 1]; title="Extreme State", titlesize=30, xlabel="τ [days]", ylabel="Autocovariance", xgridvisible=false, ygridvisible=false, options...)
 lines!(ax, tlist, autocovariance_t, color=:black, linewidth=5, label="Markov Embedding")
-lines!(ax, tlist, autocovariance_t2 * fixmeratio, color=(:blue, 0.5), linewidth=20, label="FIX ME LATER Timeseries")
+lines!(ax, tlist, autocovariance_t2 * fixmeratio, color=(:blue, 0.5), linewidth=20, label="Timeseries")
 scatter!(ax, tlist, autocovariance_m, color=(:purple, 0.5), markersize=20, label="Generator")
-scatter!(ax, tlist, autocovariance_m2, color=(:green, 0.5), markersize=20, label="Perron-Frobenius at each time τ")
+scatter!(ax, tlist, autocovariance_m2, color=(:green, 0.5), markersize=20, label="Transfer Operators")
+# scatter!(ax, tlist, autocovariance_m_sub_gen2, color=(:orange, 0.5), markersize=20, label="Generator 2")
 lines!(ax, tlist, autocovariance_random, color=:red, linewidth=5, label="Random Vector")
 axislegend(ax, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
 # inset
