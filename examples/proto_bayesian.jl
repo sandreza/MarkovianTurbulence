@@ -9,11 +9,15 @@ samples = rand(likelihood, num_obs)
 c_samples = cumsum(samples)
 plot_c_samples = [0, c_samples...]
 
+μ = 3
+σ² = 1.0
+α₀ = μ^2 / σ²
+β₀ = μ / σ²
 fig = Figure()
 sl1 = Slider(fig[2, 1], range=0:num_obs, startvalue=0)
 obs = sl1.value
-α = @lift 2 + $obs
-β = @lift 2 + plot_c_samples[$obs+1]
+α = @lift α₀ + $obs
+β = @lift β₀ + plot_c_samples[$obs+1]
 θ = @lift 1 / $β
 dist = @lift Gamma($α, $θ)
 mean_value = @lift "μ = " * string(mean($dist))
@@ -256,12 +260,31 @@ function prior_parameter_distribution(number_of_states::Int, time_rates::Float64
     exit_probabilities = [Dirichlet(α⃗) for i in 1:number_of_states]
     return GeneratorParameterDistributions(rates, exit_probabilities)
 end
+
+function prior_parameter_distribution(number_of_states::Int, time_rates::Float64)
+    α = 2 * time_rates
+    β = 2
+    θ = 1 / β
+    rates = [Gamma(α, θ) for i in 1:number_of_states]
+    α⃗ = ones(number_of_states - 1)
+    exit_probabilities = [Dirichlet(α⃗) for i in 1:number_of_states]
+    return GeneratorParameterDistributions(rates, exit_probabilities)
+end
+
+function prior_parameter_distribution(number_of_states::Int, time_rates::Float64; α=2, β=2, α⃗=ones(number_of_states - 1))
+    α = α * time_rates
+    β = β
+    θ = 1 / β
+    rates = [Gamma(α, θ) for i in 1:number_of_states]
+    exit_probabilities = [Dirichlet(α⃗) for i in 1:number_of_states]
+    return GeneratorParameterDistributions(rates, exit_probabilities)
+end
 ##
 number_of_states = 3
 rates = 1.0
 prior = prior_parameter_distribution(3, 1.0)
 
-data = markov_chain
+data = markov_chain[1:1]
 tmp = BayesianGenerator(data, prior; dt=dt)
 
 rates = mean.(tmp.posterior.mean_rates)
@@ -298,7 +321,6 @@ function rand(Q::BayesianGenerator)
 end
 rand(Q::BayesianGenerator, n::Int) = [rand(Q) for i in 1:n]
 
-rand(tmp.posterior)
 ##
 posterior = tmp.posterior
 prior = tmp.prior
@@ -313,3 +335,43 @@ Q3 = BayesianGenerator(markov_chain[floor(Int, 2 * 10^5)+1:floor(Int, 2 * 10^6)]
 Q4 = BayesianGenerator(markov_chain[floor(Int, 2 * 10^6)+1:floor(Int, 2 * 10^7)], prior; dt=dt)
 
 rand(Q1)
+
+##
+states = 100
+Q = prior_parameter_distribution(states, 1.0; α=100, β=100, α⃗=ones(states - 1)* 0.001 )
+Λ, V = eigen(rand(Q))
+tmp = [eigen(rand(Q)) for i in 1:100]
+##
+fig = Figure()
+ax = Axis(fig[1, 1])
+scatter!(ax, real.(tmp[1].values), imag.(tmp[1].values), color = (:red, 0.1))
+for i in eachindex(tmp)
+    scatter!(ax, real.(tmp[i].values), imag.(tmp[i].values), color = (:red, 0.1))
+end
+
+ax2 = Axis(fig[1, 2])
+scatter!(ax2, reverse(real.(-1 ./ tmp[1].values)[1:end-1]), color=(:blue, 0.1))
+for i in eachindex(tmp)
+    scatter!(ax2, reverse(real.( -1 ./ tmp[i].values)[1:end-1]),  color=(:blue, 0.1))
+end
+ylims!(ax2, (0, 2))
+
+ax3 = Axis(fig[2,1])
+for i in eachindex(tmp)
+    p = real.(tmp[i].vectors[:, end])
+    p /= sum(p)
+    scatter!(ax3, reverse(sort(p)),  color=(:blue, 0.1))
+end
+ylims!(ax3, 0, 0.05)
+display(fig)
+
+#
+hexbin(real.(tmp[1].values), imag.(tmp[1].values), cellsize = 0.1, colormap = :plasma)
+xs = Float64[]
+ys = Float64[]
+for i in eachindex(tmp)
+    xs = [xs..., real.(tmp[i].values)...]
+    ys = [ys..., imag.(tmp[i].values)...]
+end
+##
+hexbin(xs, ys, cellsize=0.04, colormap=:plasma)
