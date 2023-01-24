@@ -16,7 +16,7 @@ dt_days = dt * 80 / 86400
 time_in_days = (0:length(observables[:, 1])-1) .* dt_days
 
 scatter(observables[1:10000, 2])
-scatter([(observables[i, 9], observables[i, 8]) for i in 1:10000], color = (:black, 0.1))
+scatter([(observables[i, 9], observables[i, 8]) for i in 1:10000], color=(:black, 0.1))
 ##
 function autocovariance(x; timesteps=length(x))
     μ = mean(x)
@@ -159,18 +159,19 @@ display(fig)
 
 ##
 import MarkovChainHammer.TransitionMatrix: koopman_modes
+Q = rand(Qtotal) # generator(markov_chain; dt=dt_days) #rand(Qtotal)
+# Q = rand(posterior_similar_Q)
+# Q = generator(markov_chain; dt=dt_days)
 𝒦 = koopman_modes(Q)
-fastest = [real(𝒦[1, markov_index]) for markov_index in markov_embedding_2]
-slowest = [real(𝒦[end-1, markov_index]) for markov_index in markov_embedding_2]
-
+Λ, V = eigen(Q)
+timescales = -1 ./ Λ
+index1 = minimum([argmax(imag.(-1 ./ Λ)), 399])
+index2 = 10 # minimum([argmax(imag.(-1 ./ Λ[1:index1-10])), 399])
+fastest = [real(𝒦[index1, markov_index]) for markov_index in markov_embedding_2]
+slowest = [real(𝒦[index2, markov_index]) for markov_index in markov_embedding_2]
 tmp_fast = autocorrelation(fastest; timesteps=1000)
 tmp_slow = autocorrelation(slowest; timesteps=1000)
-##
-all_modes = zeros(1000, 100)
-for i in ProgressBar(1:100)
-    tmp = [real(𝒦[i, markov_index]) for markov_index in markov_embedding_2]
-    all_modes[:, i] .= autocorrelation(tmp; timesteps=1000)
-end
+println(sortperm(real(𝒦[index1, :])))
 ##
 fig = Figure()
 ax = Axis(fig[1, 1])
@@ -178,10 +179,17 @@ tlist = time_in_days[1:1000]
 common_options = (; linewidth=3)
 lines!(ax, tlist, tmp_fast / tmp_fast[1]; color=:red, common_options...)
 lines!(ax, tlist, tmp_slow / tmp_slow[1]; color=:blue, common_options...)
-lines!(ax, tlist, exp.(-tlist / timescales[end-1]); color=:blue, linestyle=:dot, common_options...)
-lines!(ax, tlist, exp.(-tlist / timescales[1]); color=:red, linestyle=:dot, common_options...)
-lines!(ax, tlist, 0.6 * exp.(-tlist / 4); color=:purple, linestyle=:dot, common_options...)
+lines!(ax, tlist, real.(exp.(-tlist ./ timescales[index2])); color=(:blue, 0.5), linestyle=:dot, common_options...)
+lines!(ax, tlist, real.(exp.(-tlist ./ timescales[index1])); color=(:red, 0.5), linestyle=:dot, common_options...)
+xlims!(ax, (0, 20))
+# lines!(ax, tlist, 0.6 * exp.(-tlist / 4); color=:purple, linestyle=:dot, common_options...)
 display(fig)
+##
+all_modes = zeros(1000, 100)
+for i in ProgressBar(1:100)
+    tmp = [real(𝒦[i, markov_index]) for markov_index in markov_embedding_2]
+    all_modes[:, i] .= autocorrelation(tmp; timesteps=1000)
+end
 
 ##
 fig = Figure()
@@ -336,7 +344,7 @@ tt = zeros(400)
 tt[index] = 1
 tmplist_autocovariance2 = autocovariance(tt, Q, tlist)
 
-fig = Figure() 
+fig = Figure()
 ax = Axis(fig[1, 1])
 lines!(tlist, tmplist_autocovariance)
 lines!(tlist, tmplist_autocovariance2)

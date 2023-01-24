@@ -22,7 +22,6 @@ end
 close(hfile)
 close(hfilegeo)
 
-file_name = "p2_markov_model_even_time_nstate_100_extreme.h5"
 hfile = h5open(data_directory * file_name, "r")
 markov_chain = read(hfile["markov embedding"])
 time_in_days = (0:length(markov_chain)-1) .* dt_days

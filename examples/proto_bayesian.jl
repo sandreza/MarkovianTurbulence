@@ -195,10 +195,12 @@ function BayesianGenerator(data, prior::GeneratorParameterDistributions; dt=1)
     ht_data = holding_times(data, number_of_states; dt=dt)
     p_data = Int.(count_operator(data, number_of_states))
     p_data = p_data - Diagonal(diag(p_data))
+
     posterior_rates = Vector{Gamma{Float64}}(undef, number_of_states)
     posterior_exit_probabilities = Vector{Dirichlet{Float64,Vector{Float64},Float64}}(undef, number_of_states)
     predictive_holding_times = Vector{GeneralizedPareto{Float64}}(undef, number_of_states)
     predictive_exit_counts = Vector{DirichletMultinomial{Float64}}(undef, number_of_states)
+
     for i in 1:number_of_states
         number_of_exits = length(ht_data[i])
         α, θ = params(prior.mean_rates[i])
@@ -321,12 +323,6 @@ function rand(Q::BayesianGenerator)
 end
 rand(Q::BayesianGenerator, n::Int) = [rand(Q) for i in 1:n]
 
-##
-posterior = tmp.posterior
-prior = tmp.prior
-Qs = mean(rand(prior, 100))
-Qs = mean(rand(posterior, 100))
-
 
 ##
 Q1 = BayesianGenerator(markov_chain[1:floor(Int, 2 * 10^4)], prior; dt=dt)
@@ -338,35 +334,35 @@ rand(Q1)
 
 ##
 states = 100
-Q = prior_parameter_distribution(states, 1.0; α=100, β=100, α⃗=ones(states - 1)* 0.001 )
+prior_Q = prior_parameter_distribution(states, 1.0; α=100, β=100, α⃗=ones(states - 1) * 0.001)
 Λ, V = eigen(rand(Q))
 tmp = [eigen(rand(Q)) for i in 1:100]
 ##
 fig = Figure()
 ax = Axis(fig[1, 1])
-scatter!(ax, real.(tmp[1].values), imag.(tmp[1].values), color = (:red, 0.1))
+scatter!(ax, real.(tmp[1].values), imag.(tmp[1].values), color=(:red, 0.1))
 for i in eachindex(tmp)
-    scatter!(ax, real.(tmp[i].values), imag.(tmp[i].values), color = (:red, 0.1))
+    scatter!(ax, real.(tmp[i].values), imag.(tmp[i].values), color=(:red, 0.1))
 end
 
 ax2 = Axis(fig[1, 2])
 scatter!(ax2, reverse(real.(-1 ./ tmp[1].values)[1:end-1]), color=(:blue, 0.1))
 for i in eachindex(tmp)
-    scatter!(ax2, reverse(real.( -1 ./ tmp[i].values)[1:end-1]),  color=(:blue, 0.1))
+    scatter!(ax2, reverse(real.(-1 ./ tmp[i].values)[1:end-1]), color=(:blue, 0.1))
 end
 ylims!(ax2, (0, 2))
 
-ax3 = Axis(fig[2,1])
+ax3 = Axis(fig[2, 1])
 for i in eachindex(tmp)
     p = real.(tmp[i].vectors[:, end])
     p /= sum(p)
-    scatter!(ax3, reverse(sort(p)),  color=(:blue, 0.1))
+    scatter!(ax3, reverse(sort(p)), color=(:blue, 0.1))
 end
 ylims!(ax3, 0, 0.05)
 display(fig)
 
 #
-hexbin(real.(tmp[1].values), imag.(tmp[1].values), cellsize = 0.1, colormap = :plasma)
+hexbin(real.(tmp[1].values), imag.(tmp[1].values), cellsize=0.1, colormap=:plasma)
 xs = Float64[]
 ys = Float64[]
 for i in eachindex(tmp)
@@ -375,3 +371,40 @@ for i in eachindex(tmp)
 end
 ##
 hexbin(xs, ys, cellsize=0.04, colormap=:plasma)
+
+##
+states = length(union(markov_chain))
+prior_Q = prior_parameter_distribution(states, 1.0; α=1.0, β=1.0, α⃗=ones(states - 1) * 0.1)
+posterior_similar_Q = prior_parameter_distribution(states, 1.35; α=20.0, β=20.0, α⃗=ones(states - 1)*10 )
+#  1.35; α=20.0, β=20.0, α⃗=ones(states - 1)*10 , similar to posterior
+# increasing certainty about holding times is what does the trick
+
+##
+Qtotal = BayesianGenerator(markov_chain, prior_Q; dt=dt_days)
+
+fig = Figure()
+ax = Axis(fig[1, 1]; title = "Decorrelation Times", xlabel = "eigenvalue index", ylabel = "Decorrelation Time (days)")
+
+for i in 1:1
+    scatter!(ax, reverse(sort(real.(-1 ./ eigen(rand(Qtotal)).values)[1:end-1])), color = (:blue, 0.3), label = "posterior")
+    scatter!(ax, reverse(sort(real.(-1 ./ eigen(rand(prior_Q)).values)[1:end-1])), color = (:green, 0.3), label = "prior")
+end
+for i in 2:30
+    scatter!(ax, reverse(sort(real.(-1 ./ eigen(rand(Qtotal)).values)[1:end-1])), color=(:blue, 0.1))
+    scatter!(ax, reverse(sort(real.(-1 ./ eigen(rand(prior_Q)).values)[1:end-1])), color=(:green, 0.1))
+end
+scatter!(ax, reverse(sort(real.(-1 ./ eigen(Q).values)[1:end-1])), color=(:red, 0.5), label="empirical", markersize = 15)
+axislegend(ax, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
+ylims!(ax, (0, 3))
+display(fig)
+##
+Nfull = floor(Int, length(markov_chain))
+N2 = floor(Int, Nfull / 2)
+N10 = floor(Int, Nfull / 10)
+N100 = floor(Int, Nfull / 100)
+
+Q1 = BayesianGenerator(markov_chain[N10+1:end], prior_Q; dt=dt_days)
+Q10 = BayesianGenerator(markov_chain[N100+1:N10], prior_Q; dt=dt_days)
+Q100 = BayesianGenerator(markov_chain[1:N100], prior_Q; dt=dt_days)
+Q2_p1 = BayesianGenerator(markov_chain[N2+1:end], prior_Q; dt=dt_days)
+Q2_p2 = BayesianGenerator(markov_chain[1:N2], prior_Q; dt=dt_days)
