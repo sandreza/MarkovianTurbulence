@@ -1,5 +1,5 @@
 using GLMakie
-using MarkovChainHammer, MarkovianTurbulence
+using MarkovChainHammer, MarkovianTurbulence, MarkovChainHammer.BayesianMatrix
 using Distributions
 
 using ProgressBars, LinearAlgebra, Statistics, Random
@@ -51,16 +51,27 @@ Q = generator(markov_chain; dt=dt)
 p = steady_state(Q)
 ht = holding_times(markov_chain; dt=dt)
 ##
-Q1 = RandomGeneratorMatrix2(markov_chain[1:floor(Int, 2 * 10^4)], 3; dt=dt)
-Q2 = RandomGeneratorMatrix2(markov_chain[floor(Int, 2 * 10^4)+1:floor(Int, 2 * 10^5)], 3; dt=dt)
-Q3 = RandomGeneratorMatrix2(markov_chain[floor(Int, 2 * 10^5)+1:floor(Int, 2 * 10^6)], 3; dt=dt)
-Q4 = RandomGeneratorMatrix2(markov_chain[floor(Int, 2 * 10^6)+1:floor(Int, 2 * 10^7)], 3; dt=dt)
+prior = MarkovChainHammer.BayesianMatrix.uninformative_prior(3)
+#=
+Q1 = BayesianGenerator(markov_chain[1:floor(Int, 2 * 10^4)], prior; dt=dt)
+Q2 = BayesianGenerator(markov_chain[floor(Int, 2 * 10^4)+1:floor(Int, 2 * 10^5)], prior; dt=dt)
+Q3 = BayesianGenerator(markov_chain[floor(Int, 2 * 10^5)+1:floor(Int, 2 * 10^6)], prior; dt=dt)
+Q4 = BayesianGenerator(markov_chain[floor(Int, 2 * 10^6)+1:floor(Int, 2 * 10^7)], prior; dt=dt)
+=#
+# Q1 = BayesianGenerator(markov_chain[1:floor(Int, 2 * 10^3)], prior; dt=dt)
+Q1 = BayesianGenerator(markov_chain[1:10^5], prior; dt=dt)
+Q2 = BayesianGenerator(markov_chain[1+2*10^7-10^5:2*10^7], prior; dt=dt)
+Q3 = BayesianGenerator(markov_chain[1:2*10^6], prior; dt=dt)
+Q4 = BayesianGenerator(markov_chain[2*10^7+1 - 2*10^6:2*10^7], prior; dt=dt)
+Q5 = BayesianGenerator(markov_chain, prior; dt=dt)
+
 num_samples = 100000
 Q1s = rand(Q1, num_samples)
 Q2s = rand(Q2, num_samples)
 Q3s = rand(Q3, num_samples)
 Q4s = rand(Q4, num_samples)
-Qs = [Q1s, Q2s, Q3s, Q4s]
+Q5s = rand(Q5, num_samples)
+Qs = [Q1s, Q2s, Q3s, Q4s, Q5s]
 
 Q = generator(markov_chain[1:end]; dt=dt)
 ##
@@ -71,7 +82,7 @@ best_empirical = [observable(Q) for observable in observables]
 Nbins = 500
 xys = []
 for i in 1:9
-    xrange = quantile.(Ref([obs[i, 1]..., obs[i, 2]..., obs[i, 3]...]), (0.0001, 0.9999))
+    xrange = quantile.(Ref([obs[i, 1]..., obs[i, 2]..., obs[i, 3]...]), (0.001, 0.999))
     xy = [histogram(obs[i, j], bins=Nbins, custom_range=xrange) for j in eachindex(Qs)]
     push!(xys, xy)
 end
@@ -84,41 +95,44 @@ titlenames = ["Q₁₁", "Q₂₁", "Q₃₁", "Q₁₂", "Q₂₂", "Q₃₂", 
 # https://juliagraphics.github.io/Colors.jl/latest/namedcolors/
 spine_colors = [:red, :blue, :orange]
 time_pdf_colors = [:blue, :orange, :black, :red]
-time_pdf_colors = [:cyan4, :darkslateblue, :gold4, :black]
-time_pdf_labels = ["T=100", "T=1000", "T=10000", "T=100000"]
-opacities = [0.75, 0.75, 0.75, 0.75] .* 0.75
+time_pdf_colors = [:cyan4, :darkslateblue, :gold4, :orchid, :black]
+# time_pdf_labels = ["T=100", "T=1000", "T=10000", "T=100000"]
+time_pdf_labels = ["T ∈ [0, 10³]", "T ∈ [10⁷ - 10³, 10⁷]", "T ∈ [0, 10⁴]", "T ∈ [10⁷ - 10⁴, 10⁷]", "T ∈ [0, 10⁷]"]
+opacities = [0.75, 0.75, 0.75, 0.75, 0.5] .* 0.75
 axs = []
 for i in 1:9
     ii = (i - 1) % 3 + 1
     jj = (i - 1) ÷ 3 + 1
     # change spine colors
     spinecolor = (; bottomspinecolor=spine_colors[jj], topspinecolor=spine_colors[jj], leftspinecolor=spine_colors[ii], rightspinecolor=spine_colors[ii])
-    othercolor = (; titlecolor=spine_colors[jj], xgridcolor=spine_colors[jj], ygridcolor=spine_colors[jj], xtickcolor=spine_colors[jj], ytickcolor=spine_colors[jj], xticklabelcolor=spine_colors[jj], yticklabelcolor=spine_colors[jj])
-    ax = Axis(fig[ii, jj]; title=titlenames[i], othercolor..., spinewidth=10, spinecolor..., options..., xgridvisible=false, ygridvisible=false)
+    othercolor = (; titlecolor=spine_colors[jj], xgridcolor=spine_colors[jj], ygridcolor=spine_colors[jj], xtickcolor=spine_colors[jj], ytickcolor=spine_colors[jj], xticklabelcolor=spine_colors[jj], yticklabelcolor=:black)
+    ax = Axis(fig[ii, jj]; title=titlenames[i], othercolor..., spinewidth=3, spinecolor..., options..., xgridvisible=false, ygridvisible=false)
     push!(axs, ax)
-    for j in 1:4
+    for j in 1:5
         barplot!(ax, xys[i][j]..., color=(time_pdf_colors[j], opacities[j]), label=time_pdf_labels[j], gap=0.0)
     end
+    # vlines!(ax, Q[i], color=(:orchid3, 1.0), linewidth=10, label="Best empirical")
     if jj > 1
         hideydecorations!(ax)
     end
-    ylims!(ax, (-0.001, 0.1))
+    # ylims!(ax, (-0.001, 0.1))
 end
 
-xlims!(axs[1], (-1.5, -0.7));
-xlims!(axs[2], (0.25, 0.65))
-xlims!(axs[3], (0.4, 0.85))
-xlims!(axs[4], (1.0, 2.75))
-xlims!(axs[5], (-6, -3))
-xlims!(axs[6], (1.5, 3.5))
-xlims!(axs[7], (0.4, 1.2))
-xlims!(axs[8], (0.4, 1.1))
-xlims!(axs[9], (-2.25, -0.9))
-[ylims!(axs[i], (-0.001, 0.075)) for i in [1, 4, 7]]
-[ylims!(axs[i], (-0.001, 0.085)) for i in [1 + 1, 4 + 1, 7 + 1]]
-[ylims!(axs[i], (-0.001, 0.085)) for i in [1 + 2, 4 + 2, 7 + 2]]
+xlims!(axs[1], (-1.3, -1.0));
+xlims!(axs[2], (0.4, 0.65))
+xlims!(axs[3], (0.5, 0.8))
+xlims!(axs[4], (1.55, 2.25))
+xlims!(axs[5], (-4.5, -3))
+xlims!(axs[6], (1.3, 2.5))
+xlims!(axs[7], (0.5, 0.75))
+xlims!(axs[8], (0.35, 0.7))
+xlims!(axs[9], (-1.5, -0.9))
 
-axislegend(axs[5], position=:lt, framecolor=(:grey, 0.5), patchsize=(30, 30), markersize=100, labelsize=40)
+[ylims!(axs[i], (-0.000, 0.08)) for i in [1, 4, 7]]
+[ylims!(axs[i], (-0.000, 0.08)) for i in [1 + 1, 4 + 1, 7 + 1]]
+[ylims!(axs[i], (-0.000, 0.08)) for i in [1 + 2, 4 + 2, 7 + 2]]
+
+axislegend(axs[5], position=:rt, framecolor=(:grey, 0.5), patchsize=(30, 30), markersize=100, labelsize=40)
 display(fig)
 ##
 save("lorenz_random_entries.png", fig)

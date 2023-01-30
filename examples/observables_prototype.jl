@@ -57,8 +57,8 @@ save("held_suarez_autocovariance_n" * string(nstates) * ".png", fig)
 labelsize = 40
 options = (; xlabel="Observable", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 fig = Figure(resolution=(2500, 1250))
-observable_timeseries = g⃗_t[4]
-observabe_steady_state = g⃗_m[4]
+observable_timeseries = g⃗_t[3]
+observabe_steady_state = g⃗_m[3]
 
 bin_options = [5, 10, 20, 400]
 for (i, bins) in enumerate(bin_options)

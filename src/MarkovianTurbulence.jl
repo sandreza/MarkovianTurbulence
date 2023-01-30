@@ -25,6 +25,8 @@ function rk4(f, s, dt)
     return s + (k1 + 2 * k2 + 2 * k3 + k4) * dt / 6
 end
 
+
+#=
 export autocovariance, autocorrelation
 
 function autocovariance(x; timesteps=length(x))
@@ -264,5 +266,5 @@ function generate(process::ContinuousTimeEmpiricalProcess, n, initial_condition)
     end
     return simulated_chain
 end
-
+=#
 end # module MarkovianTurbulence

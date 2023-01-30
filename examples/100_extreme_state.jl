@@ -1,13 +1,14 @@
 using HDF5, Statistics, MarkovianTurbulence
 using MarkovChainHammer, LinearAlgebra, GLMakie
+using MarkovChainHammer.BayesianMatrix
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, perron_frobenius
 import MarkovChainHammer.TransitionMatrix: steady_state, entropy
-import MarkovChainHammer.Utils: histogram
+import MarkovChainHammer.Utils: histogram, autocovariance
 
 nstates = 100
 data_directory = pwd() * "/data/"
 file_name1 = "markov_model_extreme_nstate_100.h5"
-file_name = "p2_markov_model_even_time_nstate_100_extreme.h5"
+file_name = "p3_markov_model_even_time_nstate_100_extreme.h5"
 hfile = h5open(data_directory * file_name, "r")
 hfilegeo = h5open(data_directory * file_name1, "r")
 
@@ -49,9 +50,9 @@ tlist = collect(time_in_days)[1:200] # [1:327]
 sub_markov_chain = copy(markov_chain)
 sub_markov_chain[markov_chain.>10] .= 11 # lump all states > 10 into one state, this corresponds to treating all non-extreme states the same
 Q_sub = generator(sub_markov_chain; dt=dt_days)
-QRandom_sub = RandomGeneratorMatrix2(sub_markov_chain; dt=dt_days)
+QRandom_sub = BayesianGenerator(sub_markov_chain; dt=dt_days)
 Ps_sub = [mean([perron_frobenius(sub_markov_chain[i:j:end], 11) for i in 1:j]) for j in 1:length(tlist)]
-Q2_sub = log(Ps_sub[40]) /(40 * dt_days)
+Q2_sub = log(Ps_sub[40]) / (40 * dt_days)
 P_sub = perron_frobenius(sub_markov_chain)
 p_sub = steady_state(Q_sub)
 ht_sub = holding_times(sub_markov_chain, 11; dt=dt_days)
@@ -96,19 +97,6 @@ stats = (; max=maximum(htextreme[2]), mean=mean(htextreme[2]), min=minimum(htext
 # perron-frobenius operator for each time t 
 Ps = [mean([perron_frobenius(markov_chain[i:j:end], nstates) for i in 1:j]) for j in 1:length(tlist)]
 ##
-import MarkovianTurbulence.autocovariance
-function autocovariance(observable, Ps::Vector{Matrix{Float64}}, steps)
-    autocor = zeros(steps + 1)
-    p = steady_state(Ps[1])
-    μ² = sum(observable .* p)^2
-    autocor[1] = observable' * (observable .* p) - μ²
-    for i in 1:steps
-        # p = steady_state(Ps[i])
-        # μ² = sum(observable .* p)^2
-        autocor[i+1] = observable' * Ps[i] * (observable .* p) - μ²
-    end
-    return autocor
-end
 observable_m = zeros(100)
 observable_m[1:10] .= 1
 
@@ -188,70 +176,131 @@ display(fig)
 save("held_suarez_extreme_graph_n100.png", fig)
 ##
 
-##
-using Clustering
+ht = holding_times(markov_chain, 3; dt=dt)
+bins = [5, 20, 100]
+color_choices = [:red, :blue, :orange] # same convention as before
+index_names = ["Negative Lobe", "Origin", "Positive Lobe"]
+hi = 1 #holding index
+bin_index = 1 # bin index
+labelsize = 40
+options = (; xlabel="Time", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
+fig = Figure(resolution=(2800, 1800))
+for hi in 1:3, bin_index in 1:3
+    ax = Axis(fig[hi, bin_index]; title=index_names[hi] * " Holding Times " * ", " * string(bins[bin_index]) * " Bins", options...)
+    holding_time_index = hi
 
-Tmarkovchain = sub_markov_chain # (Tlist .> 290) .+ 1
+    holding_time_limits = (0, ceil(Int, maximum(ht[holding_time_index])))
+    holding_time, holding_time_probability = histogram(ht[holding_time_index]; bins=bins[bin_index], custom_range=holding_time_limits)
 
-lag = 6
-embedding_dimension = 10
-tuple_list = []
-mclength = length(Tmarkovchain)
-embedded_chain = zeros(embedding_dimension, mclength - lag * (embedding_dimension - 1))
-for i in 1:embedding_dimension
-    index_start = lag * (i - 1) + 1
-    index_end = lag * (embedding_dimension - i)
-    embedded_chain[i, :] .= Tmarkovchain[index_start:end-index_end]
-    push!(tuple_list, (index_start, index_end))
+    barplot!(ax, holding_time, holding_time_probability, color=(color_choices[hi], 0.5), gap=0.0, label="Data")
+    λ = 1 / mean(ht[holding_time_index])
+
+    Δholding_time = holding_time[2] - holding_time[1]
+    exponential_distribution = @. (exp(-λ * (holding_time - 0.5 * Δholding_time)) - exp(-λ * (holding_time + 0.5 * Δholding_time)))
+    lines!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
+    scatter!(ax, holding_time, exponential_distribution, color=(:black, 0.5), markersize=20, label="Exponential")
+    axislegend(ax, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
 end
-ncluster = 200# embedding_dimension * 11
-kmeansr = kmeans(embedded_chain, ncluster)
-Q = generator(kmeansr.assignments, ncluster; dt=dt_days)
-ll, vv = eigen(Q);
-kmodes = inv(vv)
-ll
+display(fig)
 ##
-p = steady_state(Q)
-observable_m = 1 * real.(kmodes[end-12, :]) + 3.5 * real.(kmodes[end-1, :])# p .< (0.2 / ncluster)
-# sum(p[observable_m])
-autoTQ = autocovariance(kmeansr.centers[10, :], Q, tlist)
-# autoT = autocovariance(Tmarkovchain; timesteps = length(tlist))
+# reduced chain 
+bins = [5, 10, 25, 50, 125]
+bin_index = 1
+reduced_chain = (markov_chain .< 11) .+ 1
+ht = holding_times(reduced_chain; dt=dt_days)
+holding_time_index = 2
+λ = 1 / mean(ht[holding_time_index])
+holding_time_limits = (0, dt_days * 250) # (0, ceil(Int, maximum(ht[holding_time_index])))
+holding_time, holding_time_probability = histogram(ht[holding_time_index]; bins=bins[bin_index], custom_range=holding_time_limits)
+Δholding_time = holding_time[2] - holding_time[1]
+exponential_distribution = @. (exp(-λ * (holding_time - 0.5 * Δholding_time)) - exp(-λ * (holding_time + 0.5 * Δholding_time)))
+holding_time_probability2 = copy(holding_time_probability)
+
+##
 fig = Figure()
 ax = Axis(fig[1, 1])
-scatter!(ax, tlist, autoT, color=:red)
-scatter!(ax, tlist, autoT[1] * exp.(tlist ./ real(ll[end-1])), color=:blue)
-scatter!(ax, tlist, autoT[1] * autoTQ / autoTQ[1], color=:green)
+barplot!(ax, holding_time, holding_time_probability, color=:red, linewidth=3)
+lines!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
+scatter!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
+display(fig)
+##
+# regular chain
+
+ht = holding_times(markov_chain; dt=dt_days)
+p = steady_state(Q)
+Th = sum((mean.(ht)[1:10] .* p[1:10]) / sum(p[1:10]))
+λ = 1 / Th
+
+holding_time_list = []
+weights = []
+for i in 1:10
+    holding_time_list = [holding_time_list..., ht[i]...]
+    weights = [weights..., p[i] / sum(p[1:10]) / length(ht[i]) * ones(length(ht[i]))...]
+end
+
+holding_time, holding_time_probability = histogram(holding_time_list; bins=bins[bin_index], custom_range=holding_time_limits) #  normalization = weights)
+Δholding_time = holding_time[2] - holding_time[1]
+exponential_distribution = @. (exp(-λ * (holding_time - 0.5 * Δholding_time)) - exp(-λ * (holding_time + 0.5 * Δholding_time)))
+
+fig = Figure()
+ax = Axis(fig[1, 1])
+barplot!(ax, holding_time, holding_time_probability, color=:red, linewidth=3)
+lines!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
+scatter!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
 display(fig)
 
 ##
-ht_extreme = holding_times((Tlist .> 290) .+ 1)
-simulated_chain = []
-push!(simulated_chain, 1)
-for i in ProgressBar(1:3000)
-    current_state = Int(simulated_chain[end])
-    htempirical = rand(ht_extreme[current_state])
-    for i in 1:htempirical
-        push!(simulated_chain, current_state)
-    end
-    simulated_chain = vcat(simulated_chain...)
-    if current_state == 1
-        push!(simulated_chain, 2)
-    else
-        push!(simulated_chain, 1)
-    end
+# ignore differences
+
+prior_Q = GeneratorParameterDistributions(nstates; α=1e-5, β=1e-5, αs=ones(nstates - 1) * 1e-5)
+Qbayes = BayesianGenerator(markov_chain, prior_Q; dt=dt_days)
+ht = holding_times(markov_chain; dt=dt_days)
+p = steady_state(Q)
+Th = sum((mean.(ht)[1:10] .* p[1:10]) / sum(p[1:10]))
+λ = 1 / Th
+
+holding_time_list = []
+weights = []
+predictive_posterior_list = []
+weights2 = []
+for i in 1:10
+    holding_time_list = [holding_time_list..., ht[i]...]
+    weights = [weights..., p[i] / sum(p[1:10]) / length(ht[i]) * ones(length(ht[i]))...]
+    predictive_posterior_list = [predictive_posterior_list..., rand(Qbayes.predictive.holding_times[i], 1000)...]
+    weights2 = [weights2..., p[i] / (sum(p[1:10]) * 1000) * ones(1000)...]
 end
 
-ctmep = ContinuousTimeEmpiricalProcess(markov_chain)
-simulated_chain = generate(ctmep, 10000, 1)
-autosim = autocovariance(simulated_chain .== 1; timesteps = 800)
+holding_time, holding_time_probability = histogram(holding_time_list; bins=bins[bin_index], custom_range=holding_time_limits) #  normalization = weights)
+_, predictive_posterior_probability = histogram(predictive_posterior_list; bins=bins[bin_index], custom_range=holding_time_limits, normalization=weights2)
+Δholding_time = holding_time[2] - holding_time[1]
+exponential_distribution = zeros(bins[bin_index])
+for i in 1:10
+    weight = p[i] / sum(p[1:10])
+    λ = 1 / mean(ht[i])
+    @. exponential_distribution += (exp(-λ * (holding_time - 0.5 * Δholding_time)) - exp(-λ * (holding_time + 0.5 * Δholding_time))) * weight
+end
 
+fig = Figure()
+ax = Axis(fig[1, 1])
+barplot!(ax, holding_time, holding_time_probability, color=:red, linewidth=3)
+lines!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
+scatter!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
+display(fig)
 
-autocor = autocovariance(simulated_chain; timesteps=length(tlist))
+##
+scale = 10
+tmpQ = generate(rand(Qbayes), round(Int, scale * 10000000); dt=dt_days / scale)
+hta = holding_times((tmpQ .< 11) .+ 1; dt=dt_days / scale)
+mean(hta[2])
+
+_, htp2 = histogram(hta[2]; bins=bins[bin_index], custom_range=holding_time_limits)
+htp2
 ##
 fig = Figure()
 ax = Axis(fig[1, 1])
-scatter!(ax, tlist, autoT, color=:red)
-scatter!(ax, tlist, autoT[1] * exp.(tlist ./ real(ll[end-1])), color=:blue)
-scatter!(ax, tlist, autoT[1] * autoTQ / autoTQ[1], color=:green)
-scatter!(ax, tlist, autoT[1] * autocor / autocor[1], color=:yellow)
+barplot!(ax, holding_time, holding_time_probability2, color=:red, linewidth=3)
+lines!(ax, holding_time, htp2, color=:black, linewidth=3)
+scatter!(ax, holding_time, htp2, color=:black, linewidth=3)
+lines!(ax, holding_time, exponential_distribution, color=(:blue, 0.5), linewidth=10)
+xlims!(ax, (0, 4))
 display(fig)

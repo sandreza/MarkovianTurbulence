@@ -182,7 +182,7 @@ labelsize = 40
 options = (; xlabel="Time", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 fig = Figure(resolution=(2800, 1800))
 for hi in 1:3, bin_index in 1:3
-    ax = Axis(fig[hi, bin_index]; title=index_names[hi] * " Holding Times " * ", " * string(bins[bin_index]) * " Bins", options...)
+    ax = Axis(fig[hi, bin_index]; title=index_names[hi] * " Holding Times" * ", " * string(bins[bin_index]) * " Bins", options...)
     holding_time_index = hi
 
     holding_time_limits = (0, ceil(Int, maximum(ht[holding_time_index])))
