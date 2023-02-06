@@ -51,7 +51,7 @@ ylims!(ax11, 0, 2)
 
 ax12 = Axis(fig[1, 2]; title="State Probabilities", ylabel="Probability", xlabel="State Index", options...)
 scatter!(ax12, p[index_ordering], markersize=20.0, color=:blue, label="Empirical")
-scatter!(ax12, ones(length(p)) ./ length(p), color=:black, markersize=20.0, label="Uniform")
+scatter!(ax12, ones(length(p)) ./ length(p), color=(:black, 0.5), markersize=20.0, label="Uniform")
 axislegend(ax12, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
 ylims!(ax12, -0.01, 0.1)
 
@@ -66,7 +66,7 @@ scatter!(ax22, 1:length(timescales), mean_holding_time, color=:blue, markersize=
 ylims!(ax22, 0, 2)
 
 display(fig)
-
+##
 save("held_suarez_generator_properties_" * string(length(p)) * ".png", fig)
 ##
 # Holding times

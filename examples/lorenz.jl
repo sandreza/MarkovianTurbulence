@@ -4,7 +4,7 @@ using MarkovChainHammer, MarkovianTurbulence
 using ProgressBars, LinearAlgebra, Statistics, Random
 
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, steady_state, perron_frobenius
-import MarkovChainHammer.Utils: histogram
+import MarkovChainHammer.Utils: histogram, autocovariance
 
 fixed_points = [[-sqrt(72), -sqrt(72), 27], [0.0, 0.0, 0.0], [sqrt(72), sqrt(72), 27]]
 markov_states = fixed_points
@@ -17,18 +17,15 @@ timeseries = zeros(3, iterations)
 markov_chain = zeros(Int, iterations)
 timeseries[:, 1] .= initial_condition
 
-function markov_embedding(state; markov_states=markov_states)
-    return argmin([norm(state - markov_state) for markov_state in markov_states])
-end
 
-markov_index = markov_embedding(initial_condition)
+markov_index = argmin([norm(initial_condition - markov_state) for markov_state in markov_states])
 markov_chain[1] = markov_index
 for i in ProgressBar(2:iterations)
     # take one timestep forward via Runge-Kutta 4
     state = rk4(lorenz!, timeseries[:, i-1], dt)
     timeseries[:, i] .= state
     # partition state space according to most similar markov state
-    local markov_index = markov_embedding(state)
+    markov_index = argmin([norm(state - markov_state) for markov_state in markov_states])
     markov_chain[i] = markov_index
 end
 
@@ -38,6 +35,16 @@ p = steady_state(Q)
 ## construct several transfer operators 
 Ps = [mean([perron_frobenius(markov_chain[i:j:end], 3) for i in 1:j]) for j in 10:10:800]
 ## Histogram Figure 
+reaction_coordinates = [u -> u[i] for i in 1:3] # define anonymous functions for reaction coordinates
+markovs = []
+rtimeseriess = []
+for i in ProgressBar(1:3)
+    markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states]
+    rtimeseries = [current_reaction_coordinate(timeseries[:, i]) for i in 1:iterations]
+    push!(markovs, markov)
+    push!(rtimeseriess, rtimeseries)
+end
+##
 hfig = Figure(resolution=(1800, 1500))
 xfig = hfig[1, 1] = GridLayout()
 yfig = hfig[2, 1] = GridLayout()
@@ -47,7 +54,6 @@ colors = [:red, :blue, :orange]
 labels = ["x", "y", "z"]
 
 # reaction_coordinate(u) = real(iV[1, argmin([norm(u - s) for s in markov_states])]) # u[3] # 
-reaction_coordinates = [u -> u[i] for i in 1:3] # define anonymous functions for reaction coordinates
 kwargs = (; ylabel="Probability", titlesize=30, ylabelsize=40, xgridstyle=:dash, ygridstyle=:dash, xtickalign=1,
     xticksize=20, ytickalign=1, yticksize=20,
     xticklabelsize=40, yticklabelsize=40)
@@ -58,8 +64,8 @@ for i in 1:3
     current_reaction_coordinate = reaction_coordinates[i]
     subfig = subfigs[i]
 
-    markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states]
-    rtimeseries = [current_reaction_coordinate(timeseries[:, i]) for i in 1:iterations]
+    markov = markovs[i] # [current_reaction_coordinate(markov_state) for markov_state in markov_states]
+    rtimeseries = rtimeseriess[i] # [current_reaction_coordinate(timeseries[:, i]) for i in 1:iterations]
     xs_m, ys_m = histogram(markov, normalization=p, bins=bins1, custom_range=extrema(rtimeseries))
     xs_t, ys_t = histogram(rtimeseries, bins=bins2, custom_range=extrema(rtimeseries))
 
@@ -88,7 +94,7 @@ for i in 1:3
 
 end
 display(hfig)
-
+##
 save("lorenz_histogram.png", hfig)
 
 ## Lorenz autocorrelations
@@ -110,8 +116,8 @@ reaction_coordinates = [u -> u[i] for i in 1:3] # define anonymous functions for
 
 # labels = [labels..., "x > 0", "y > 0", "z > 5"]
 # reaction_coordinates = [reaction_coordinates..., u -> u[1] > 0, u -> u[2] > 0, u -> u[3] > 5]
-labels = [labels..., "ℰ(s)==1", "x < 0", "ℰ(s)==2"]
-reaction_coordinates = [reaction_coordinates..., u -> markov_embedding(u) == 1, u -> u[1] > 0, u -> markov_embedding(u) == 2]
+labels = [labels..., "ℰ(s)==1", "sign(x)", "ℰ(s)==2"]
+reaction_coordinates = [reaction_coordinates..., u -> argmin([norm(u - markov_state) for markov_state in markov_states]) == 1, u -> sign(u[1]), u -> argmin([norm(u - markov_state) for markov_state in markov_states]) == 2]
 
 kwargs = (; ylabel="Autocorrelation", titlesize=30, ylabelsize=40,
     xgridstyle=:dash, ygridstyle=:dash, ygridwidth=5, xgridwidth=5, xtickalign=1,
@@ -231,7 +237,7 @@ for i in 1:3
 end
 hidexdecorations!(axslist[1])
 hidexdecorations!(axslist[2])
-
+##
 display(fig)
 ##
 save("lorenz_dynamics_embedding.png", fig)

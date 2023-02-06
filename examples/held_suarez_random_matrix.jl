@@ -16,6 +16,7 @@ dt = read(hfile["dt"]) * read(hfile["small planet factor"]) * jump_factor
 dt_days = dt / 86400
 unordered_markov_chain = read(hfile["markov embedding 2"]) # L²
 =#
+nstates = 400
 data_directory = pwd() * "/data/"
 file_name = "markov_model_even_time_nstate_400.h5"
 hfile1 = h5open(data_directory * file_name, "r")
@@ -62,7 +63,7 @@ Qtotal = Q21
 Q10 = BayesianGenerator(markov_chain_1[N100+1:N10]; dt=dt_days)
 Q100 = BayesianGenerator(markov_chain_1[1:N100]; dt=dt_days)
 
-Nrandom_arrays = 2000
+Nrandom_arrays = 100
 tic = time()
 Q10s = rand(Q10, Nrandom_arrays)
 Q100s = rand(Q100, Nrandom_arrays)

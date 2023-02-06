@@ -60,6 +60,12 @@ Q4 = BayesianGenerator(markov_chain[floor(Int, 2 * 10^6)+1:floor(Int, 2 * 10^7)]
 =#
 # Q1 = BayesianGenerator(markov_chain[1:floor(Int, 2 * 10^3)], prior; dt=dt)
 Q1 = BayesianGenerator(markov_chain[1:10^5], prior; dt=dt)
+Q2 = BayesianGenerator(markov_chain[10^5+1:2*10^5], prior; dt=dt)
+
+Q12 = BayesianGenerator(markov_chain[10^5+1:2*10^5], Q1.posterior; dt=dt)
+Q3 = BayesianGenerator(markov_chain[1:2*10^5], prior; dt=dt)
+
+
 Q2 = BayesianGenerator(markov_chain[1+2*10^7-10^5:2*10^7], prior; dt=dt)
 Q3 = BayesianGenerator(markov_chain[1:2*10^6], prior; dt=dt)
 Q4 = BayesianGenerator(markov_chain[2*10^7+1 - 2*10^6:2*10^7], prior; dt=dt)
