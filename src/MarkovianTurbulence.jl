@@ -25,6 +25,17 @@ function rk4(f, s, dt)
     return s + (k1 + 2 * k2 + 2 * k3 + k4) * dt / 6
 end
 
+export StateEmbedding 
+
+abstract type AbstractEmbedding end
+
+struct StateEmbedding{S} <: AbstractEmbedding
+    markov_states::S
+end
+function (embedding::StateEmbedding)(current_state)
+    argmin([norm(current_state - markov_state) for markov_state in embedding.markov_states])
+end
+
 
 #=
 export autocovariance, autocorrelation

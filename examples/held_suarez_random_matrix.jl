@@ -27,7 +27,7 @@ dt = read(hfile1["dt"]) * read(hfile1["small planet factor"]) * jump_factor
 dt_days = dt / 86400
 unordered_markov_chain_1 = read(hfile1["markov embedding 2"])
 unordered_markov_chain_2 = read(hfile2["markov embedding 2"])
-time_in_days = (0:2*length(markov_embedding_2)-1) .* dt_days
+time_in_days = (0:2*length(unordered_markov_chain_1)-1) .* dt_days
 close(hfile1)
 close(hfile2)
 

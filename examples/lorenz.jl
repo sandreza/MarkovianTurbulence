@@ -8,6 +8,7 @@ import MarkovChainHammer.Utils: histogram, autocovariance
 
 fixed_points = [[-sqrt(72), -sqrt(72), 27], [0.0, 0.0, 0.0], [sqrt(72), sqrt(72), 27]]
 markov_states = fixed_points
+embedding = StateEmbedding(fixed_points)
 
 initial_condition = [14.0, 20.0, 27.0]
 dt = 0.005
@@ -18,14 +19,14 @@ markov_chain = zeros(Int, iterations)
 timeseries[:, 1] .= initial_condition
 
 
-markov_index = argmin([norm(initial_condition - markov_state) for markov_state in markov_states])
+markov_index = embedding(initial_condition)
 markov_chain[1] = markov_index
 for i in ProgressBar(2:iterations)
     # take one timestep forward via Runge-Kutta 4
     state = rk4(lorenz!, timeseries[:, i-1], dt)
     timeseries[:, i] .= state
     # partition state space according to most similar markov state
-    markov_index = argmin([norm(state - markov_state) for markov_state in markov_states])
+    markov_index = embedding(state)
     markov_chain[i] = markov_index
 end
 
