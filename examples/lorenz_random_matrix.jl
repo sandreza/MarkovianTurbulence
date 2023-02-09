@@ -72,7 +72,10 @@ Q2 = BayesianGenerator(markov_chain[1+2*10^7-10^5:2*10^7], prior; dt=dt)
 Q3 = BayesianGenerator(markov_chain[1:2*10^6], prior; dt=dt)
 Q4 = BayesianGenerator(markov_chain[2*10^7+1 - 2*10^6:2*10^7], prior; dt=dt)
 Q5 = BayesianGenerator(markov_chain, prior; dt=dt)
+Q̄ = mean(Q5)
+p̄ = steady_state(Q̄)
 
+Q_symmetrized = BayesianGenerator(s_markov_chain, Q5.posterior; dt=dt)
 num_samples = 100000
 Q1s = rand(Q1, num_samples)
 Q2s = rand(Q2, num_samples)
@@ -145,3 +148,78 @@ display(fig)
 ##
 save("lorenz_random_entries.png", fig)
 
+##
+primitive_labels = ["x", "y", "z"]
+observables = []
+labels = []
+for i in 1:3
+    push!(observables, u -> u[i])
+    push!(labels, primitive_labels[i])
+end
+for i in 1:3
+    for j in i:3
+        push!(observables, u -> u[i] * u[j])
+        push!(labels, primitive_labels[i] * primitive_labels[j])
+    end
+end
+for i in 1:3
+    for j in i:3
+        for k in j:3
+            push!(observables, u -> u[i] * u[j] * u[k])
+            push!(labels, primitive_labels[i] * primitive_labels[j] * primitive_labels[k])
+        end
+    end
+end
+for i in 1:3
+    for j in i:3
+        for k in j:3
+            for l in k:3
+                push!(observables, u -> u[i] * u[j] * u[k] * u[l])
+                push!(labels, primitive_labels[i] * primitive_labels[j] * primitive_labels[k] * primitive_labels[l])
+            end
+        end
+    end
+end
+
+ensemble_mean = Float64[]
+temporal_mean = Float64[]
+for i in eachindex(labels)
+    g = observables[i]
+    push!(ensemble_mean, sum(g.(markov_states) .* p̄))
+    push!(temporal_mean, mean([g(timeseries[:,i]) for i in 1:iterations]))
+    println(" ensemble: ⟨$(labels[i])⟩ = $(ensemble_mean[i])")
+    println(" temporal: ⟨$(labels[i])⟩ = $(temporal_mean[i])")
+    println("--------------------------------------------")
+end
+##
+using Printf
+averages_symbol = [" \$\\langle $(labels[i]) \\rangle\$ &" for i in 1:9]
+averages_string = prod(averages_symbol)
+ensemble_symbol = [@sprintf("%.1e", ensemble_mean[i]) * " & " for i in 1:9]
+ensemble_string = prod(ensemble_symbol)
+temporal_symbol = [@sprintf("%.1e", temporal_mean[i]) * " & " for i in 1:9]
+temporal_string = prod(temporal_symbol)
+
+abc = open("example.txt", "w")
+write(abc, averages_string)
+write(abc, "\n")
+write(abc, ensemble_string)
+write(abc, "\n")
+write(abc, temporal_string)
+close(abc)
+
+
+averages_symbol = [" \$\\langle $(labels[i]) \\rangle\$ &" for i in 10:19]
+averages_string = prod(averages_symbol)
+ensemble_symbol = [@sprintf("%.1e", ensemble_mean[i]) * " & " for i in 10:19]
+ensemble_string = prod(ensemble_symbol)
+temporal_symbol = [@sprintf("%.1e", temporal_mean[i]) * " & " for i in 10:19]
+temporal_string = prod(temporal_symbol)
+
+abc = open("example2.txt", "w")
+write(abc, averages_string)
+write(abc, "\n")
+write(abc, ensemble_string)
+write(abc, "\n")
+write(abc, temporal_string)
+close(abc)
