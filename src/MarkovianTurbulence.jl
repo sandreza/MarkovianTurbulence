@@ -36,6 +36,11 @@ function (embedding::StateEmbedding)(current_state)
     argmin([norm(current_state - markov_state) for markov_state in embedding.markov_states])
 end
 
+using MarkovChainHammer
+using MarkovChainHammer.TransitionMatrix: steady_state
+export symmetrize 
+
+
 
 #=
 export autocovariance, autocorrelation
@@ -55,7 +60,7 @@ function autocorrelation(x; timesteps=length(x))
     return autocor ./ μ^2
 end
 
-function autocovariance(g⃗, Q::Eigen, timelist)
+function autocovariance2(g⃗, Q::Eigen, timelist)
     autocov = zeros(length(timelist))
     # Q  = V Λ V⁻¹
     Λ, V = Q

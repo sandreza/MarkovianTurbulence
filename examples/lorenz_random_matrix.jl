@@ -51,6 +51,9 @@ sQ = generator(s_markov_chain; dt=dt)
 ## construct transition matrix
 Q = generator(markov_chain; dt=dt)
 p = steady_state(Q)
+Q̃ = Diagonal(1 ./ sqrt.(p)) * Q * Diagonal(sqrt.(p))
+noise_Q̃ = Symmetric((Q̃ + Q̃') / 2)
+drift_Q̃ = (Q̃ - Q̃') / 2
 ht = holding_times(markov_chain; dt=dt)
 ##
 prior = MarkovChainHammer.BayesianMatrix.uninformative_prior(3)
@@ -209,6 +212,7 @@ write(abc, temporal_string)
 close(abc)
 
 
+# averages_symbol = [" \$\\langle \\mathscr{$(labels[i])} \\rangle\$ &" for i in 10:19]
 averages_symbol = [" \$\\langle $(labels[i]) \\rangle\$ &" for i in 10:19]
 averages_string = prod(averages_symbol)
 ensemble_symbol = [@sprintf("%.1e", ensemble_mean[i]) * " & " for i in 10:19]

@@ -39,8 +39,12 @@ ht2 = holding_times(markov_embedding_2_2, dt = dt_days)
 ht_12 = [[ht1[i]..., ht2[i]...] for i in 1:400]
 
 Q = mean(Q)
-Q[abs.(Q).<eps(1e8)] .= 0.0
 p = steady_state(Q)
+Q̃ = Diagonal(1 ./ sqrt.(p)) * Q * Diagonal(sqrt.(p))
+symmetric_Q̃ = Symmetric((Q̃ + Q̃') / 2)
+antisymmetric_Q̃ = (Q̃ - Q̃')/2
+sQ = Diagonal(sqrt.(p)) * symmetric_Q̃ * Diagonal(1 ./ sqrt.(p))
+aQ = Diagonal(sqrt.(p)) * antisymmetric_Q̃ * Diagonal(1 ./ sqrt.(p))
 index_ordering = reverse(sortperm(p)) # order indices by probability
 mean_holding_time = [-1 / Q[i, i] for i in eachindex(p)][index_ordering]
 entropy(p)

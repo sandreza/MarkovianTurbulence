@@ -40,6 +40,7 @@ reaction_coordinates = [u -> u[i] for i in 1:3] # define anonymous functions for
 markovs = []
 rtimeseriess = []
 for i in ProgressBar(1:3)
+    current_reaction_coordinate = reaction_coordinates[i]
     markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states]
     rtimeseries = [current_reaction_coordinate(timeseries[:, i]) for i in 1:iterations]
     push!(markovs, markov)
@@ -161,9 +162,9 @@ for i in ProgressBar(1:6)
     ax1 = Axis(subfig[1, 1]; title="Observable:  " * labels[i], kwargs...)
     l1 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_timeseries[:], color=:black, label="Timeseries", linewidth=7)
     l2 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_snapshots[:], color=(:purple, 0.5), label="Generator", linewidth=7)
-    autocorrelation_perron_frobenius = autocovariance(markov, Ps, 79)
-    autocorrelation_perron_frobenius = autocorrelation_perron_frobenius / autocorrelation_perron_frobenius[1]
-    l3 = scatter!(ax1, dt .* collect(0:10:total-1), autocorrelation_perron_frobenius, color=(:green, 0.5), markersize=20, label="Transfer Operators")
+    # autocorrelation_perron_frobenius = autocovariance(markov, Ps, 79)
+    # autocorrelation_perron_frobenius = autocorrelation_perron_frobenius / autocorrelation_perron_frobenius[1]
+    # l3 = scatter!(ax1, dt .* collect(0:10:total-1), autocorrelation_perron_frobenius, color=(:green, 0.5), markersize=20, label="Transfer Operators")
 
     # generated_states = [current_reaction_coordinate(markov_states[link]) for link in generated_chain]
     # autocorrelation_generated = autocovariance(generated_states; timesteps = 800)

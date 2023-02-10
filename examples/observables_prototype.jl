@@ -3,6 +3,7 @@ using HDF5, Statistics, ProgressBars
 using MarkovChainHammer, LinearAlgebra, GLMakie
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, perron_frobenius
 import MarkovChainHammer.TransitionMatrix: steady_state, entropy, koopman_modes
+import MarkovChainHammer.Utils: autocovariance
 import MarkovChainHammer.Utils: histogram
 
 filename = "observables_test_2.h5"
