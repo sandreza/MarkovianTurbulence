@@ -180,7 +180,7 @@ display(auto_fig)
 save("lorenz_autocorrelation.png", auto_fig)
 
 ## Holding Times Figure
-ht = holding_times(markov_chain, 3; dt=dt)
+ht = holding_times(markov_chain, maximum(markov_chain); dt=dt)
 bins = [5, 20, 100]
 color_choices = [:red, :blue, :orange] # same convention as before
 index_names = ["Negative Lobe", "Origin", "Positive Lobe"]
