@@ -7,7 +7,7 @@ Combines a contour plot with a heatmap and adds numbers to the contours.
 """
 function contour_heatmap!(ax, ϕ, p_coord, slice_zonal, contour_levels, colorrange;
     add_labels=false, colormap=:balance,
-    heuristic=1, random_seed=12345)
+    heuristic=1, random_seed=12345, labelsize = 40, markersize = 25)
 
     cplot = contour!(ax, ϕ, p_coord, slice_zonal, levels=contour_levels, color=:black, interpolate=true)
     hm = heatmap!(ax, ϕ, p_coord, slice_zonal, colorrange=colorrange, colormap=colormap, interpolate=true)
@@ -16,10 +16,10 @@ function contour_heatmap!(ax, ϕ, p_coord, slice_zonal, contour_levels, colorran
 
     ax.xlabel = "Latitude [ᵒ]"
     ax.ylabel = "Stretched Height"
-    ax.xlabelsize = 40
-    ax.ylabelsize = 40
-    ax.xticklabelsize = 40
-    ax.yticklabelsize = 40
+    ax.xlabelsize = labelsize
+    ax.ylabelsize = labelsize
+    ax.xticklabelsize = labelsize
+    ax.yticklabelsize = labelsize
 
     ax.xticks = ([-75, -50, -25, 0, 25, 50, 75], ["75S", "50S", "25S", "0", "25N", "50N", "75N"])
     pressure_levels = [1000, 850, 700, 550, 400, 250, 100, 10]
@@ -70,8 +70,8 @@ function contour_heatmap!(ax, ϕ, p_coord, slice_zonal, contour_levels, colorran
                 end
                 # end of heuristics
                 local location = Point3(segments[index]..., 2.0f0)
-                local sc = scatter!(ax, location, markersize=25, align=(:center, :center), color=(:white, 0.1), strokecolor=:white)
-                local anno = text!(ax, [("$contour_val", location)], align=(:center, :center), fontsize=25, color=:black)
+                local sc = scatter!(ax, location, markersize=markersize , align=(:center, :center), color=(:white, 0.1), strokecolor=:white)
+                local anno = text!(ax, [("$contour_val", location)], align=(:center, :center), fontsize=markersize , color=:black)
 
                 delete!(ax, sc)
                 delete!(ax, cplot)

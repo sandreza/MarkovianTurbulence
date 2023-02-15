@@ -113,12 +113,19 @@ include("contour_heatmap.jl")
 ##
 contour_levels = collect(-8:4:28)
 fig = Figure(resolution=(3000, 1000))
+latitudes = ϕlist / π * 180 .- 90
+labelsize = 50
+markersize = 40
 ax1 = Axis(fig[1,1]; title = "Ensemble Average", titlesize = 40)
-contour_heatmap!(ax1, ϕlist, pressure, zonal_state, contour_levels, (-40, 40), colormap = :balance, add_labels=true)
+contour_heatmap!(ax1, latitudes, pressure, zonal_state, contour_levels, (-40, 40), colormap=:balance, add_labels=true, labelsize = labelsize, markersize = markersize)
 ax2 = Axis(fig[1, 2]; title="Time Average", titlesize = 40)
-contour_heatmap!(ax2, ϕlist, pressure, zonal_state2, contour_levels, (-40, 40), colormap=:balance, add_labels=true)
+contour_heatmap!(ax2, latitudes, pressure, zonal_state2, contour_levels, (-40, 40), colormap=:balance, add_labels=true, labelsize = labelsize, markersize = markersize)
 ax3 = Axis(fig[1, 3]; title="Difference", titlesize = 40)
 contour_levels_Δ = collect(1:0.25:3)
-contour_heatmap!(ax3, ϕlist, pressure, abs.(zonal_state2 - zonal_state), contour_levels_Δ, (0, 4), colormap=:thermometer, add_labels=true)
+contour_heatmap!(ax3, latitudes, pressure, abs.(zonal_state2 - zonal_state), contour_levels_Δ, (0, 4), colormap=:thermometer, add_labels=true, labelsize = labelsize, markersize = markersize)
+hideydecorations!(ax2)
+hideydecorations!(ax3)
 display(fig)
+
+##
 save("held_suarez_ensemble_average_zonal_wind.png", fig)
