@@ -64,14 +64,14 @@ Q3 = BayesianGenerator(markov_chain[floor(Int, 2 * 10^5)+1:floor(Int, 2 * 10^6)]
 Q4 = BayesianGenerator(markov_chain[floor(Int, 2 * 10^6)+1:floor(Int, 2 * 10^7)], prior; dt=dt)
 =#
 # Q1 = BayesianGenerator(markov_chain[1:floor(Int, 2 * 10^3)], prior; dt=dt)
-Q1 = BayesianGenerator(markov_chain[1:10^5], prior; dt=dt)
-Q2 = BayesianGenerator(markov_chain[10^5+1:2*10^5], prior; dt=dt)
+Q1 = BayesianGenerator(markov_chain[1: 2* 10^5], prior; dt=dt)
+Q2 = BayesianGenerator(markov_chain[2 * 10^5+1:4*10^5], prior; dt=dt)
 
-Q12 = BayesianGenerator(markov_chain[10^5+1:2*10^5], Q1.posterior; dt=dt)
-Q3 = BayesianGenerator(markov_chain[1:2*10^5], prior; dt=dt)
+Q12 = BayesianGenerator(markov_chain[2*10^5+1:4*10^5], Q1.posterior; dt=dt)
+Q3 = BayesianGenerator(markov_chain[1:4*10^5], prior; dt=dt)
 
 
-Q2 = BayesianGenerator(markov_chain[1+2*10^7-10^5:2*10^7], prior; dt=dt)
+Q2 = BayesianGenerator(markov_chain[1+2*10^7-2*10^5:2*10^7], prior; dt=dt)
 Q3 = BayesianGenerator(markov_chain[1:2*10^6], prior; dt=dt)
 Q4 = BayesianGenerator(markov_chain[2*10^7+1 - 2*10^6:2*10^7], prior; dt=dt)
 Q5 = BayesianGenerator(markov_chain, prior; dt=dt)
@@ -111,7 +111,7 @@ spine_colors = [:red, :blue, :orange]
 time_pdf_colors = [:blue, :orange, :black, :red]
 time_pdf_colors = [:cyan4, :darkslateblue, :gold4, :orchid, :black]
 # time_pdf_labels = ["T=100", "T=1000", "T=10000", "T=100000"]
-time_pdf_labels = ["T ∈ [0, 10³]", "T ∈ [10⁷ - 10³, 10⁷]", "T ∈ [0, 10⁴]", "T ∈ [10⁷ - 10⁴, 10⁷]", "T ∈ [0, 10⁷]"]
+time_pdf_labels = ["T ∈ [0, 10³]", "T ∈ [10⁵ - 10³, 10⁵]", "T ∈ [0, 10⁴]", "T ∈ [10⁵ - 10⁴, 10⁷]", "T ∈ [0, 10⁵]"]
 opacities = [0.75, 0.75, 0.75, 0.75, 0.5] .* 0.75
 axs = []
 for i in 1:9
@@ -142,9 +142,9 @@ xlims!(axs[7], (0.5, 0.75))
 xlims!(axs[8], (0.35, 0.7))
 xlims!(axs[9], (-1.5, -0.9))
 
-[ylims!(axs[i], (-0.000, 0.08)) for i in [1, 4, 7]]
-[ylims!(axs[i], (-0.000, 0.08)) for i in [1 + 1, 4 + 1, 7 + 1]]
-[ylims!(axs[i], (-0.000, 0.08)) for i in [1 + 2, 4 + 2, 7 + 2]]
+[ylims!(axs[i], (-0.000, 0.055)) for i in [1, 4, 7]]
+[ylims!(axs[i], (-0.000, 0.055)) for i in [1 + 1, 4 + 1, 7 + 1]]
+[ylims!(axs[i], (-0.000, 0.055)) for i in [1 + 2, 4 + 2, 7 + 2]]
 
 axislegend(axs[5], position=:rt, framecolor=(:grey, 0.5), patchsize=(30, 30), markersize=100, labelsize=40)
 display(fig)

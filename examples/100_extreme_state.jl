@@ -175,34 +175,6 @@ display(fig)
 ##
 save("held_suarez_extreme_graph_n100.png", fig)
 ##
-
-ht = holding_times(markov_chain, 3; dt=dt)
-bins = [5, 20, 100]
-color_choices = [:red, :blue, :orange] # same convention as before
-index_names = ["Negative Lobe", "Origin", "Positive Lobe"]
-hi = 1 #holding index
-bin_index = 1 # bin index
-labelsize = 40
-options = (; xlabel="Time", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
-fig = Figure(resolution=(2800, 1800))
-for hi in 1:3, bin_index in 1:3
-    ax = Axis(fig[hi, bin_index]; title=index_names[hi] * " Holding Times " * ", " * string(bins[bin_index]) * " Bins", options...)
-    holding_time_index = hi
-
-    holding_time_limits = (0, ceil(Int, maximum(ht[holding_time_index])))
-    holding_time, holding_time_probability = histogram(ht[holding_time_index]; bins=bins[bin_index], custom_range=holding_time_limits)
-
-    barplot!(ax, holding_time, holding_time_probability, color=(color_choices[hi], 0.5), gap=0.0, label="Data")
-    λ = 1 / mean(ht[holding_time_index])
-
-    Δholding_time = holding_time[2] - holding_time[1]
-    exponential_distribution = @. (exp(-λ * (holding_time - 0.5 * Δholding_time)) - exp(-λ * (holding_time + 0.5 * Δholding_time)))
-    lines!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
-    scatter!(ax, holding_time, exponential_distribution, color=(:black, 0.5), markersize=20, label="Exponential")
-    axislegend(ax, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
-end
-display(fig)
-##
 # reduced chain 
 bins = [5, 10, 25, 50, 125]
 bin_index = 1
@@ -211,21 +183,24 @@ ht = holding_times(reduced_chain; dt=dt_days)
 holding_time_index = 2
 λ = 1 / mean(ht[holding_time_index])
 holding_time_limits = (0, dt_days * 250) # (0, ceil(Int, maximum(ht[holding_time_index])))
-holding_time, holding_time_probability = histogram(ht[holding_time_index]; bins=bins[bin_index], custom_range=holding_time_limits)
-Δholding_time = holding_time[2] - holding_time[1]
-exponential_distribution = @. (exp(-λ * (holding_time - 0.5 * Δholding_time)) - exp(-λ * (holding_time + 0.5 * Δholding_time)))
-holding_time_probability2 = copy(holding_time_probability)
 
-##
-fig = Figure()
-ax = Axis(fig[1, 1])
-barplot!(ax, holding_time, holding_time_probability, color=:red, linewidth=3)
-lines!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
-scatter!(ax, holding_time, exponential_distribution, color=:black, linewidth=3)
+fig = Figure(resolution=(2005, 768))
+for i in 1:4
+    ax = Axis(fig[1, i]; title = "bins = $(bins[i])", xlabel = "days", ylabel = "probability", titlesize=30, xlabelsize=30, ylabelsize=30, xticklabelsize=30, yticklabelsize=30)
+    holding_time, holding_time_probability = histogram(ht[holding_time_index]; bins=bins[i], custom_range=holding_time_limits)
+    Δholding_time = holding_time[2] - holding_time[1]
+    println(1/λ)
+    exponential_distribution = @. (exp(-λ * (holding_time - 0.5 * Δholding_time)) - exp(-λ * (holding_time + 0.5 * Δholding_time)))
+    holding_time_probability2 = copy(holding_time_probability)
+    barplot!(ax, holding_time, holding_time_probability, color=:red, linewidth=3)
+    lines!(ax, holding_time, exponential_distribution, color=(:black, 0.5), linewidth=3)
+    scatter!(ax, holding_time, exponential_distribution, color=(:black, 0.5), linewidth=3)
+end
 display(fig)
 ##
+save("held_suarez_extreme_holding_time_n100.png", fig)
+##
 # regular chain
-
 ht = holding_times(markov_chain; dt=dt_days)
 p = steady_state(Q)
 Th = sum((mean.(ht)[1:10] .* p[1:10]) / sum(p[1:10]))
