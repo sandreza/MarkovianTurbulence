@@ -14,7 +14,7 @@
 *.jl.mem
 *.DS*
 *.h5*
-
+*.jld2*
 # Data files
 data/
 

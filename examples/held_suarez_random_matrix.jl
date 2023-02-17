@@ -1,5 +1,6 @@
 using HDF5, Statistics, MarkovianTurbulence
 using MarkovChainHammer, LinearAlgebra, GLMakie, Random
+using MarkovChainHammer.BayesianMatrix
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, perron_frobenius
 import MarkovChainHammer.TransitionMatrix: steady_state, entropy
 import MarkovChainHammer.Utils: histogram
@@ -60,21 +61,22 @@ N2 = floor(Int, Nfull / 2)
 N10 = floor(Int, Nfull / 10)
 N100 = floor(Int, Nfull / 100)
 Qtotal = Q21
-Q10 = BayesianGenerator(markov_chain_1[N100+1:N10]; dt=dt_days)
-Q100 = BayesianGenerator(markov_chain_1[1:N100]; dt=dt_days)
+Q10 = BayesianGenerator(markov_chain_1[N100+1:N10], prior; dt=dt_days)
+Q100 = BayesianGenerator(markov_chain_1[1:N100], prior; dt=dt_days)
 
-Nrandom_arrays = 100
-tic = time()
+Nrandom_arrays = 10
+tic = Base.time()
 Q10s = rand(Q10, Nrandom_arrays)
 Q100s = rand(Q100, Nrandom_arrays)
 Q1s = rand(Q1, Nrandom_arrays)
 Q2s = rand(Q2, Nrandom_arrays)
-toc = time()
-println("The amount of time in minutes to generate the random arrays are $( (toc - tic) / 60)")
-Q̅ = mean(Q1s)
-p̅ = steady_state(Q̅)
+toc = Base.time()
 
-Qs = [Q100s, Q10s, Q1s, Q2s]
+Q̅ = mean(Q1s);
+p̅ = steady_state(Q̅);
+
+Qs = [Q100s, Q10s, Q1s, Q2s];
+println("The amount of time in minutes to generate the random arrays are $( (toc - tic) / 60)")
 # Q1s, 
 ##
 observables = [Q -> -1 / Q[i, i] for i in 1:9]
@@ -125,13 +127,19 @@ save("held_suarez_random_entries_n" * string(nstates) * ".png", fig)
 
 ##
 eigenvalue_indices = 1:2:18
+observables = [Q -> real(-1 / eigvals(Q)[end-i]) for i in eigenvalue_indices]
+#=
+
 Q_totals = rand(Qtotal, Nrandom_arrays)
 Qs = [Q1s, Q2s, Q_totals]
-observables = [Q -> real(-1 / eigvals(Q)[end-i]) for i in eigenvalue_indices]
 tic = time()
 obs = [observable.(Q) for observable in observables, Q in Qs]
 toc = time()
 println("the amount of time spent is ", toc - tic)
+=#
+using JLD2
+obs = jldopen("10k_eigenvalues.jld2")["obs"]
+
 best_empirical = [observable(Q) for observable in observables]
 ##
 Nbins = 100
@@ -152,7 +160,7 @@ for i in 1:9
     end
     =#
 
-    xy = [histogram(obs[i, j], bins=Nbins, custom_range=xrange) for j in eachindex(Qs)]
+    xy = [histogram(obs[i, j], bins=Nbins, custom_range=xrange) for j in 1:3]
     push!(xys, xy)
 end
 ##
@@ -164,6 +172,7 @@ titlenames = ["-real(1 / λᵢ) for i=" * string(i + 1) for i in eigenvalue_indi
 # https://juliagraphics.github.io/Colors.jl/latest/namedcolors/
 time_pdf_colors = [:gold4, :orchid, :black]
 time_pdf_labels = ["100 year (part 1)", "100 year (part 2)", "200 year"]
+spine_colors = [:red, :blue, :orange]
 opacities = [0.75, 0.75, 0.75] .* 0.75
 axs = []
 for i in 1:9
