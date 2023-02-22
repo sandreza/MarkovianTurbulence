@@ -56,7 +56,7 @@ colors = [:red, :blue, :orange]
 labels = ["x", "y", "z"]
 
 # reaction_coordinate(u) = real(iV[1, argmin([norm(u - s) for s in markov_states])]) # u[3] # 
-kwargs = (; ylabel="Probability", titlesize=30, ylabelsize=40, xgridstyle=:dash, ygridstyle=:dash, xtickalign=1,
+kwargs = (; ylabel="Probability", titlesize=40, ylabelsize=40, xgridstyle=:dash, ygridstyle=:dash, xtickalign=1,
     xticksize=20, ytickalign=1, yticksize=20,
     xticklabelsize=40, yticklabelsize=40)
 bins1 = 19
@@ -118,10 +118,11 @@ reaction_coordinates = [u -> u[i] for i in 1:3] # define anonymous functions for
 
 # labels = [labels..., "x > 0", "y > 0", "z > 5"]
 # reaction_coordinates = [reaction_coordinates..., u -> u[1] > 0, u -> u[2] > 0, u -> u[3] > 5]
-labels = [labels..., "ℰ(s)==1", "sign(x)", "ℰ(s)==2"]
+# labels = [labels..., "ℰ(s)==1", "sign(x)", "ℰ(s)==2"]
+labels = ["g¹", "g²", "g³", "g⁴", "g⁵", "g⁶"]
 reaction_coordinates = [reaction_coordinates..., u -> argmin([norm(u - markov_state) for markov_state in markov_states]) == 1, u -> sign(u[1]), u -> argmin([norm(u - markov_state) for markov_state in markov_states]) == 2]
 
-kwargs = (; ylabel="Autocorrelation", titlesize=30, ylabelsize=40,
+kwargs = (; ylabel="Autocorrelation", titlesize=50, ylabelsize=40,
     xgridstyle=:dash, ygridstyle=:dash, ygridwidth=5, xgridwidth=5, xtickalign=1,
     xticksize=20, ytickalign=1, yticksize=20, xlabel="Time",
     xticklabelsize=40, yticklabelsize=40, xlabelsize=40)
@@ -159,7 +160,7 @@ for i in ProgressBar(1:6)
     auto_correlation_snapshots .*= 1.0 / auto_correlation_snapshots[1]
 
 
-    ax1 = Axis(subfig[1, 1]; title="Observable:  " * labels[i], kwargs...)
+    ax1 = Axis(subfig[1, 1]; title="  " * labels[i], kwargs...)
     l1 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_timeseries[:], color=:black, label="Timeseries", linewidth=7)
     l2 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_snapshots[:], color=(:purple, 0.5), label="Generator", linewidth=7)
     # autocorrelation_perron_frobenius = autocovariance(markov, Ps, 79)
@@ -183,7 +184,7 @@ save("lorenz_autocorrelation.png", auto_fig)
 ht = holding_times(markov_chain, maximum(markov_chain); dt=dt)
 bins = [5, 20, 100]
 color_choices = [:red, :blue, :orange] # same convention as before
-index_names = ["Negative Lobe", "Origin", "Positive Lobe"]
+index_names = ["Negative Wing", "Origin", "Positive Wing"]
 hi = 1 #holding index
 bin_index = 1 # bin index
 labelsize = 40
@@ -216,15 +217,16 @@ color_choices = [:red, :blue, :orange]
 colorlist = [color_choices[markov_chain[i]] for i in 1:nsteps]
 tlist = collect(0:dt:dt*(iterations-1))
 labelsize = 30
-options = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize, xgridvisible=false, ygridvisible=false)
-
+labelsizetick = 20
+options = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsizetick, yticklabelsize=labelsizetick, xgridvisible=false, ygridvisible=false)
+options2 = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize, xgridvisible=false, ygridvisible=false)
 fig = Figure(resolution=(1500, 1000))
 embedding_fig = fig[2, 1] = GridLayout()
 dynamics_fig = fig[1, 1] = GridLayout()
 
-ax = Axis(embedding_fig[1, 1]; title="Markov Chain Embedding", xlabel="Time", ylabel="State", options...)
+ax = Axis(embedding_fig[1, 1]; title="Markov Chain Embedding", xlabel="Time", ylabel="Partition", options2...)
 scatter!(ax, tlist[1:nsteps], markov_chain[1:nsteps], color=colorlist)
-ax.yticks = ([1, 2, 3], ["Left Lobe", "Origin", "Right Lobe"])
+ax.yticks = ([1, 2, 3], ["Left Wing", "Origin", "Right Wing"])
 
 dynamics_labels = ["x", "y", "z"]
 axslist = []

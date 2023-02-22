@@ -7,7 +7,7 @@ using ProgressBars, LinearAlgebra, Statistics, Random
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, steady_state, count_operator
 import MarkovChainHammer.Trajectory: generate
 import MarkovChainHammer.Utils: histogram
-
+##
 Random.seed!(12345)
 
 fixed_points = [[-sqrt(72), -sqrt(72), 27], [0.0, 0.0, 0.0], [sqrt(72), sqrt(72), 27]]
@@ -47,6 +47,8 @@ end
 s_markov_chain = symmetry13.(markov_chain)
 omarkov_chain = copy(markov_chain)
 sQ = generator(s_markov_chain; dt=dt)
+Q  = BayesianGenerator(markov_chain; dt  = dt)
+symmetrized_Q = BayesianGenerator(s_markov_chain, Q.posterior; dt  = dt)
 # markov_chain = [omarkov_chain... s_markov_chain...]
 ## construct transition matrix
 Q = generator(markov_chain; dt=dt)
@@ -77,6 +79,7 @@ Q4 = BayesianGenerator(markov_chain[2*10^7+1 - 2*10^6:2*10^7], prior; dt=dt)
 Q5 = BayesianGenerator(markov_chain, prior; dt=dt)
 Q̄ = mean(Q5)
 p̄ = steady_state(Q̄)
+symmetrized_p̅ = steady_state(mean(symmetrized_Q ))
 
 Q_symmetrized = BayesianGenerator(s_markov_chain, Q5.posterior; dt=dt)
 num_samples = 100000
@@ -111,7 +114,7 @@ spine_colors = [:red, :blue, :orange]
 time_pdf_colors = [:blue, :orange, :black, :red]
 time_pdf_colors = [:cyan4, :darkslateblue, :gold4, :orchid, :black]
 # time_pdf_labels = ["T=100", "T=1000", "T=10000", "T=100000"]
-time_pdf_labels = ["T ∈ [0, 10³]", "T ∈ [10⁵ - 10³, 10⁵]", "T ∈ [0, 10⁴]", "T ∈ [10⁵ - 10⁴, 10⁷]", "T ∈ [0, 10⁵]"]
+time_pdf_labels = ["T ∈ [0, 10³]", "T ∈ [10⁵ - 10³, 10⁵]", "T ∈ [0, 10⁴]", "T ∈ [10⁵ - 10⁴, 10⁵]", "T ∈ [0, 10⁵]"]
 opacities = [0.75, 0.75, 0.75, 0.75, 0.5] .* 0.75
 axs = []
 for i in 1:9
@@ -152,6 +155,7 @@ display(fig)
 save("lorenz_random_entries.png", fig)
 
 ##
+p_used = p̄
 primitive_labels = ["x", "y", "z"]
 observables = []
 labels = []
@@ -188,7 +192,7 @@ ensemble_mean = Float64[]
 temporal_mean = Float64[]
 for i in eachindex(labels)
     g = observables[i]
-    push!(ensemble_mean, sum(g.(markov_states) .* p̄))
+    push!(ensemble_mean, sum(g.(markov_states) .* p_used))
     push!(temporal_mean, mean([g(timeseries[:,i]) for i in 1:iterations]))
     println(" ensemble: ⟨$(labels[i])⟩ = $(ensemble_mean[i])")
     println(" temporal: ⟨$(labels[i])⟩ = $(temporal_mean[i])")
@@ -198,9 +202,9 @@ end
 using Printf
 averages_symbol = [" \$\\langle $(labels[i]) \\rangle\$ &" for i in 1:9]
 averages_string = prod(averages_symbol)
-ensemble_symbol = [@sprintf("%.1e", ensemble_mean[i]) * " & " for i in 1:9]
+ensemble_symbol = [@sprintf("%.1f", ensemble_mean[i]) * " & " for i in 1:9]
 ensemble_string = prod(ensemble_symbol)
-temporal_symbol = [@sprintf("%.1e", temporal_mean[i]) * " & " for i in 1:9]
+temporal_symbol = [@sprintf("%.1f", temporal_mean[i]) * " & " for i in 1:9]
 temporal_string = prod(temporal_symbol)
 
 abc = open("example.txt", "w")
@@ -215,9 +219,9 @@ close(abc)
 # averages_symbol = [" \$\\langle \\mathscr{$(labels[i])} \\rangle\$ &" for i in 10:19]
 averages_symbol = [" \$\\langle $(labels[i]) \\rangle\$ &" for i in 10:19]
 averages_string = prod(averages_symbol)
-ensemble_symbol = [@sprintf("%.1e", ensemble_mean[i]) * " & " for i in 10:19]
+ensemble_symbol = [@sprintf("%.1f", ensemble_mean[i]) * " & " for i in 10:19]
 ensemble_string = prod(ensemble_symbol)
-temporal_symbol = [@sprintf("%.1e", temporal_mean[i]) * " & " for i in 10:19]
+temporal_symbol = [@sprintf("%.1f", temporal_mean[i]) * " & " for i in 10:19]
 temporal_string = prod(temporal_symbol)
 
 abc = open("example2.txt", "w")

@@ -86,7 +86,7 @@ index1 = 50 # minimum([argmax(imag.(-1 ./ Λ)), 399])
 index2 = 395
 fastest = [real(𝒦[index1, markov_index]) for markov_index in markov_embedding_2]
 slowest = [real(𝒦[index2, markov_index]) for markov_index in markov_embedding_2]
-steps = 800
+steps = 1200
 tmp_fast = autocovariance(fastest[1:1200000]; timesteps=steps)
 tmp_slow = autocovariance(slowest[1:1200000]; timesteps=steps)
 tlist = time_in_days[1:steps]
@@ -99,29 +99,30 @@ fig = Figure(resolution=(2400, 1400))
 labelsize = 40
 options = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
 common_options = (; linewidth=7)
-ax11 = Axis(fig[1, 1]; title="Koopman Mode Timeseries", xlabel="Time [days]", options...)
-lines!(ax11, tlist, fastest[1:steps]; color=:red, common_options..., label="Mode 50")
-lines!(ax11, tlist, slowest[1:steps]; color=:blue, common_options..., label="Mode 395")
-axislegend(ax11, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
+ax11 = Axis(fig[1, 1]; title="Koopman Mode Time series", xlabel="Time [days]", options...)
+lines!(ax11, tlist, fastest[1:steps]; color=:red, common_options..., label="Mode 351")
+lines!(ax11, tlist, slowest[1:steps]; color=:blue, common_options..., label="Mode 6")
+axislegend(ax11, position=:lb, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
 ax12 = Axis(fig[1, 2]; title="Koopman Mode Decorrelation", xlabel="Time [days]", options...)
 
-lines!(ax12, tlist, tmp_fast / tmp_fast[1]; color=(:red, 0.25), label = "Mode 395 timeseries", common_options...)
-lines!(ax12, tlist, tmp_slow / tmp_slow[1]; color=(:blue, 0.25), label = "Mode 50 timeseries", common_options...)
-lines!(ax12, tlist, tmp_slow2 / tmp_slow2[1]; color=(:blue, 1.0), linestyle=:dot, label = "Mode 395 ensemble", common_options...)
-lines!(ax12, tlist, tmp_fast1 / tmp_fast1[1]; color=(:red, 1.0), linestyle=:dot, label="Mode 50 ensemble", common_options...)
+lines!(ax12, tlist, tmp_fast / tmp_fast[1]; color=(:red, 0.25), label = "Mode 6 Time series", common_options...)
+lines!(ax12, tlist, tmp_slow / tmp_slow[1]; color=(:blue, 0.25), label = "Mode 351 Time series", common_options...)
+lines!(ax12, tlist, tmp_slow2 / tmp_slow2[1]; color=(:blue, 1.0), linestyle=:dot, label = "Mode 6 Ensemble", common_options...)
+lines!(ax12, tlist, tmp_fast1 / tmp_fast1[1]; color=(:red, 1.0), linestyle=:dot, label="Mode 351 Ensemble", common_options...)
 axislegend(ax12, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
 # lines!(ax12, tlist, exp.(-0.3 .* tlist) .* cos.(2π/13 * tlist); color=(:purple, 0.5), linestyle=:dash, linewidth = 10)
-xlims!(ax12, (0, 20))
+xlims!(ax12, (0, tlist[end]))
 
 g⃗1 = real(𝒦[index1, index_ordering])
 g⃗2 = real(𝒦[index2, index_ordering])
 g⃗1 = g⃗1 / sqrt(sum(g⃗1 .^2 .* p̅ ) - sum(g⃗1 .* p̅ )^2)
 g⃗2 = g⃗2 / sqrt(sum(g⃗2 .^2 .* p̅ ) - sum(g⃗2 .* p̅ )^2)
-ax21 = Axis(fig[2, 1]; title="Koopman Mode 50", xlabel= "State Index", ylabel="Mode Amplitude", options...)
+ax21 = Axis(fig[2, 1]; title="Koopman Mode 351", xlabel= "Partition Index", ylabel="Mode Amplitude", options...)
 scatter!(ax21, g⃗1, color=:red)
-ax22 = Axis(fig[2, 2]; title="Koopman Mode 395",  xlabel= "State Index", ylabel="Mode Amplitude", options...)
+ax22 = Axis(fig[2, 2]; title="Koopman Mode 6",  xlabel= "Partition Index", ylabel="Mode Amplitude", options...)
 scatter!(ax22, g⃗2, color=:blue)
 display(fig)
+##
 save("held_suarez_koopman_modes.png", fig)
 ##
 

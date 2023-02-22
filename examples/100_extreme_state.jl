@@ -152,7 +152,7 @@ opacity_matrix = abs.(Q_sub ./ reshape([Q_sub[i, i] for i in 1:11], (1, 11)))
 opacity_matrix = opacity_matrix ./ maximum(opacity_matrix[1:10, 1:10] - I)
 opacity_list = opacity_matrix[opacity_matrix.>eps(1.0)]
 fig = Figure(resolution=(1500, 1500))
-ax = Axis(fig[1, 1]; title="Subgraph for Extreme States", titlesize=30)
+ax = Axis(fig[1, 1]; title="Subgraph for Extreme States", titlesize=50)
 g_Q_sub = DiGraph(Q_sub')
 
 edge_color_matrix = [:red for i in 1:11, j in 1:11]
@@ -171,6 +171,8 @@ p_Q = graphplot!(ax, g_Q_sub, elabels_color=elabels_color,
     edge_width=edge_width_Q, node_size=node_size,
     arrow_size=arrow_size_Q, node_color=[edge_color_matrix[i, i] for i in 1:11],
     nlabels=node_labels_Q, nlabels_fontsize=nlabels_fontsize)
+autolimits!(ax)
+hidedecorations!(ax)
 display(fig)
 ##
 save("held_suarez_extreme_graph_n100.png", fig)

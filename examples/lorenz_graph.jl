@@ -1,6 +1,7 @@
 using Random, LinearAlgebra
 using Graphs
 using GLMakie, GraphMakie
+using MarkovianTurbulence
 
 # for visualization purposes we generate less data than what we use quantitiatively
 ##
@@ -13,23 +14,24 @@ import MarkovChainHammer.TransitionMatrix: generator
 
 fixed_points = [[-sqrt(72), -sqrt(72), 27], [0.0, 0.0, 0.0], [sqrt(72), sqrt(72), 27]]
 markov_states = fixed_points
+embedding = StateEmbedding(fixed_points)
 
-timeseries = Vector{Float64}[]
-markov_chain = Int64[]
 initial_condition = [14.0, 20.0, 27.0]
-push!(timeseries, initial_condition)
 dt = 0.005
 iterations = 2*10^7
 
-markov_index = argmin([norm(initial_condition - markov_state) for markov_state in markov_states])
-push!(markov_chain, markov_index)
+timeseries = zeros(3, iterations)
+markov_chain = zeros(Int, iterations)
+timeseries[:, 1] .= initial_condition
+markov_index = embedding(initial_condition)
+markov_chain[1] = markov_index
 for i in ProgressBar(2:iterations)
     # take one timestep forward via Runge-Kutta 4
-    local state = rk4(lorenz!, timeseries[i-1], dt)
-    push!(timeseries, state)
+    state = rk4(lorenz!, timeseries[:, i-1], dt)
+    timeseries[:, i] .= state
     # partition state space according to most similar markov state
-    local markov_index = argmin([norm(state - markov_state) for markov_state in markov_states])
-    push!(markov_chain, markov_index)
+    markov_index = embedding(state)
+    markov_chain[i] = markov_index
 end
 
 Q = generator(markov_chain, 3; dt=dt)
@@ -52,7 +54,7 @@ node_size = 30.0
 edge_width_Q = [2.0 for i in 1:ne(g_Q)]
 arrow_size_Q = [20.0 for i in 1:ne(g_Q)]
 node_labels_Q = repr.(1:nv(g_Q))
-node_labels_Q = ["Negative Lobe", "Origin", "Positive Lobe"]
+node_labels_Q = ["Negative Wing", "Origin", "Positive Wing"]
 
 
 p_Q = graphplot!(ax_Q, g_Q, elabels=elabels, elabels_color=elabels_color,
@@ -76,9 +78,9 @@ for (ii, τ) in enumerate(dt_vals)
     i = (ii) ÷ 2 + 1
     ax_T1 = Axis(fig[i, j]; title="Transfer Operator for τ = " * dt_strings[ii], titlesize=30)
     skip = round(Int, τ/dt)
-    T1 = mean([perron_frobenius(markov_chain[i:skip:end], 3) for i in 1:skip])
-    # T1 = exp(Q * τ)
-    g_T1 = DiGraph(T1') # need transpose because of how graphplot works
+    # T1 = mean([perron_frobenius(markov_chain[i:skip:end], 3) for i in 1:skip])
+    T1 = exp(Q * τ)
+    g_T1 = DiGraph(T1)
     elabels = [string(T1[i])[1:5] for i in 1:ne(g_T1)]
     edge_color_T1 = [(edge_color, T1[i] / 0.5) for (i, edge_color) in enumerate(edge_color_Q)]
     elabels_color = edge_color_Q
@@ -87,7 +89,7 @@ for (ii, τ) in enumerate(dt_vals)
     edge_width_Q = [2.0 for i in 1:ne(g_T1)]
     arrow_size_Q = [20.0 for i in 1:ne(g_T1)]
     node_labels_Q = repr.(1:nv(g_Q))
-    node_labels_Q = ["Negative Lobe", "Origin", "Positive Lobe"]
+    node_labels_Q = ["Negative Wing", "Origin", "Positive Wing"]
 
     p_Q = graphplot!(ax_T1, g_T1, elabels=elabels, elabels_color=elabels_color,
         elabels_fontsize=elabels_fontsize, edge_color=edge_color_T1,

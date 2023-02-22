@@ -70,19 +70,19 @@ colors[1:8] .= :red
 scatter!(ax11, 1:length(timescales)-1, reverse(timescales[1:end-1]), color=colors, markersize=20.0)
 ylims!(ax11, 0, 1.7)
 
-ax12 = Axis(fig[1, 2]; title="State Probabilities", ylabel="Probability", xlabel="State Index", options...)
+ax12 = Axis(fig[1, 2]; title="Partition Probabilities", ylabel="Probability", xlabel="Partition Index", options...)
 scatter!(ax12, p[index_ordering], markersize=20.0, color=:blue, label="Empirical")
 scatter!(ax12, ones(length(p)) ./ length(p), color=(:black, 0.15), markersize=20.0, label="Uniform")
 axislegend(ax12, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
 ylims!(ax12, -0.001, 0.031)
 
-ax21 = Axis(fig[2, 1]; title="Connectivity", ylabel="# of States", xlabel="State Index", options...)
+ax21 = Axis(fig[2, 1]; title="Connectivity", ylabel="# of Partitions", xlabel="Partition Index", options...)
 scatter!(ax21, 1:length(timescales), connectivity_out, color=(:blue, 1.0), markersize=30.0, label="Out")
 scatter!(ax21, 1:length(timescales), connectivity_in, color=(:red, 0.5), markersize=20.0, marker=:diamond, label="In")
 axislegend(ax21, position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
 ylims!(ax21, -10, 260)
 
-ax22 = Axis(fig[2, 2]; title="Average Holding Time", ylabel="Time [days]", xlabel="State Index", options...)
+ax22 = Axis(fig[2, 2]; title="Average Holding Time", ylabel="Time [days]", xlabel="Partition Index", options...)
 scatter!(ax22, 1:length(timescales), mean_holding_time, color=:blue, markersize=20.0)
 ylims!(ax22, 0, 1.5)
 
@@ -95,7 +95,7 @@ ht = ht_12
 ordered_indices = index_ordering
 bins = [5, 20, 100]
 color_choices = [:red, :blue, :orange] # same convention as before
-index_names = ["State " * string(i) for i in 1:length(p)]
+index_names = ["Partition " * string(i) for i in 1:length(p)]
 hi = 1 #holding index
 bin_index = 1 # bin index
 labelsize = 40
@@ -132,7 +132,7 @@ fig = Figure(resolution=(1700, 1000))
 labelsize = 40
 
 options = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
-ax = Axis(fig[1, 1]; title="Markov Chain Embedding", xlabel="Time [days]", ylabel="State Index", options...)
+ax = Axis(fig[1, 1]; title="Markov Chain Embedding", xlabel="Time [days]", ylabel="Partition Index", options...)
 scatter!(ax, time_in_days[indices], embedding_ordered[indices], color=:black)
 xlims!(ax, (0, 33))
 ylims!(ax, -1, 401)
