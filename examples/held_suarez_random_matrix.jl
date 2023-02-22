@@ -1,4 +1,4 @@
-using HDF5, Statistics, MarkovianTurbulence
+using HDF5, Statistics, MarkovianTurbulence, ProgressBars
 using MarkovChainHammer, LinearAlgebra, GLMakie, Random
 using MarkovChainHammer.BayesianMatrix
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, perron_frobenius
@@ -63,24 +63,39 @@ N100 = floor(Int, Nfull / 100)
 Qtotal = Q21
 Q10 = BayesianGenerator(markov_chain_1[N100+1:N10], prior; dt=dt_days)
 Q100 = BayesianGenerator(markov_chain_1[1:N100], prior; dt=dt_days)
-
-Nrandom_arrays = 10
+Nrandom_arrays = 1000
+#=
 tic = Base.time()
 Q10s = rand(Q10, Nrandom_arrays)
 Q100s = rand(Q100, Nrandom_arrays)
 Q1s = rand(Q1, Nrandom_arrays)
 Q2s = rand(Q2, Nrandom_arrays)
 toc = Base.time()
-
 Q̅ = mean(Q1s);
-p̅ = steady_state(Q̅);
-
-Qs = [Q100s, Q10s, Q1s, Q2s];
-println("The amount of time in minutes to generate the random arrays are $( (toc - tic) / 60)")
+=#
+Q̄ = mean(Q21)
+p̅ = steady_state(Q̄);
+Qs = [Q100, Q10, Q1, Q2];
+# println("The amount of time in minutes to generate the random arrays are $( (toc - tic) / 60)")
 # Q1s, 
 ##
 observables = [Q -> -1 / Q[i, i] for i in 1:9]
-obs = [observable.(Q) for observable in observables, Q in Qs]
+# obs = [observable.(Q) for observable in observables, Q in Qs]
+obs =  [zeros(Nrandom_arrays) for i in 1:9, j in 1:4] 
+tic = Base.time()
+for j in ProgressBar(1:4)
+    Qrandom = Qs[j]
+    for k in ProgressBar(1:Nrandom_arrays)
+        Q̃ = rand(Qrandom)
+        for i in 1:9
+            @inbounds obs[i, j][k] = observables[i](Q̃)
+        end
+    end
+end
+toc = Base.time()
+println("the time is ", toc - tic)
+
+##
 best_empirical = [observable(Q) for observable in observables]
 ##
 Nbins = 100
@@ -127,7 +142,23 @@ save("held_suarez_random_entries_n" * string(nstates) * ".png", fig)
 
 ##
 eigenvalue_indices = 1:2:18
-observables = [Q -> real(-1 / eigvals(Q)[end-i]) for i in eigenvalue_indices]
+observables = [Λ -> real(-1 / Λ[end-i]) for i in eigenvalue_indices]
+obs = [zeros(Nrandom_arrays) for i in 1:9, j in 1:3]
+Qs = [Q1, Q2, Qtotal];
+tic = Base.time()
+for j in ProgressBar(1:3)
+    Qrandom = Qs[j]
+    for k in ProgressBar(1:Nrandom_arrays)
+        Q̃ = rand(Qrandom)
+        Λ = eigvals(Q̃)
+        for i in 1:9
+            @inbounds obs[i, j][k] = observables[i](Λ)
+        end
+    end
+end
+toc = Base.time()
+println("the time for eigenvalues is  ", toc - tic)
+##
 #=
 
 Q_totals = rand(Qtotal, Nrandom_arrays)
@@ -137,9 +168,10 @@ obs = [observable.(Q) for observable in observables, Q in Qs]
 toc = time()
 println("the amount of time spent is ", toc - tic)
 =#
+#=
 using JLD2
 obs = jldopen("10k_eigenvalues.jld2")["obs"]
-
+=#
 best_empirical = [observable(Q) for observable in observables]
 ##
 Nbins = 100
