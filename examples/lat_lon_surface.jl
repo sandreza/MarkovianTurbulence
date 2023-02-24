@@ -49,7 +49,7 @@ state_file =  state[:, :, 2]
 clims = quantile.(Ref(state_file[:]), (0.0,1.0))
 clims = (-clims[2], clims[2])
 colormap = :balance # :thermal
-titlestring =  "Meriodonal Velocity"
+titlestring =  "Meridional Velocity"
 ax4 = fig[2,3] = Axis(fig, title = titlestring, titlesize = 30) 
 # fig[3,2+3*2] = Label(fig, "ρv: latlon ", textsize = 30) 
 hm4 = heatmap!(ax4, λ, ϕ, state_file, colormap = colormap, colorrange = clims, interpolate = true, shading = false)
