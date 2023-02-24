@@ -63,7 +63,7 @@ N100 = floor(Int, Nfull / 100)
 Qtotal = Q21
 Q10 = BayesianGenerator(markov_chain_1[N100+1:N10], prior; dt=dt_days)
 Q100 = BayesianGenerator(markov_chain_1[1:N100], prior; dt=dt_days)
-Nrandom_arrays = 1000
+Nrandom_arrays = 100000
 #=
 tic = Base.time()
 Q10s = rand(Q10, Nrandom_arrays)
@@ -174,7 +174,7 @@ obs = jldopen("10k_eigenvalues.jld2")["obs"]
 =#
 best_empirical = [observable(Q) for observable in observables]
 ##
-Nbins = 100
+Nbins = 400
 xys = []
 p = 0.001
 for i in 1:9
@@ -223,7 +223,7 @@ for i in 1:9
         hideydecorations!(ax)
     end
     # xlims!(ax, (0.25, 3))
-    ylims!(ax, (0, 0.1))
+    ylims!(ax, (0, 10/Nbins))
 end
 # xlims!(axs[i], (1.1, 1.9))
 p = 0.002
@@ -252,7 +252,7 @@ save("held_suarez_eigenvalue_scales_n" * string(nstates) * ".png", fig)
 #=
 saving observables
 using HDF5
-hfile = h5open("data/held_suarez_eigenvalue_observable_save.h5", "w")
+hfile = h5open("data/held_suarez_eigenvalue_observable_save_p2.h5", "w")
 matrix_observables = zeros(size(obs)..., size(obs[1])...)
 for i in 1:9, j in 1:2 
     matrix_observables[i, j, :] .= obs[i,j]

@@ -93,7 +93,7 @@ for i in 1:4
     # lines!(ax, tlist, autocovariance_t[i][1] * exp.(-tlist / timescales[1]); color=:red, linestyle=:dot, label = "markov lower bound", common_options...)
     lines!(ax, tlist, autocovariance_t[i]; color=:black, label = "Time series", common_options...)
     lines!(ax, tlist, autocovariance_m[i]; color=(:purple, 0.5), label = "Ensemble", common_options...)
-    xlims!(ax, (0,10))
+    xlims!(ax, (0,9))
     if i == 1
         axislegend(ax; position=:rt, framecolor=(:grey, 0.5), patchsize=(50, 50), markersize=100, labelsize=40)
     end
