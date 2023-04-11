@@ -25,7 +25,7 @@ function rk4(f, s, dt)
     return s + (k1 + 2 * k2 + 2 * k3 + k4) * dt / 6
 end
 
-export StateEmbedding 
+export StateEmbedding, StateEmbeddingParallel
 
 abstract type AbstractEmbedding end
 
@@ -34,6 +34,24 @@ struct StateEmbedding{S} <: AbstractEmbedding
 end
 function (embedding::StateEmbedding)(current_state)
     argmin([norm(current_state - markov_state) for markov_state in embedding.markov_states])
+end
+
+struct StateEmbeddingParallel{S,M} <: AbstractEmbedding
+    markov_states::S
+    distances::M
+end
+
+function StateEmbeddingParallel(markov_states)
+    distances = zeros(length(markov_states))
+    StateEmbeddingParallel(markov_states, distances)
+end
+
+function (embedding::StateEmbeddingParallel)(current_state)
+    Threads.@threads for i in eachindex(embedding.markov_states)
+        @inbounds markov_state = embedding.markov_states[i]
+        @inbounds embedding.distances[i] = norm(current_state - markov_state)
+    end
+    argmin(embedding.distances)
 end
 
 using MarkovChainHammer

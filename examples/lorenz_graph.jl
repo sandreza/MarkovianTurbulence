@@ -107,3 +107,39 @@ end
 display(fig)
 ##
 save("lorenz_graph.png", fig)
+
+##
+fig = Figure(resolution=(2000, 1500))
+ax_Q = Axis(fig[1, 1]; title="Generator", titlesize=30)
+
+# Generator
+g_Q = DiGraph(Q')
+edge_color_Q = [:red, :red, :red, :blue, :blue, :blue, :orange, :orange, :orange]
+Q_prim = zeros(3,3)
+for i in 1:3
+    Q_prim[:, i] .= - Q[:, i] / Q[i, i]
+    Q_prim[i,i] = 1/Q[i,i]
+end
+# elabels = [string(round(Q_prim[i]; digits = 3))[1:4] for i in 1:ne(g_Q)]
+elabels = string.([round(Q_prim[i]; digits=2) for i in 1:ne(g_Q)])
+elabels_color = edge_color_Q
+node_color = [:red, :blue, :orange]
+edge_attr = (; linestyle=[:dot, :dash, :dash, :dash, :dot, :dash, :dash, :dash, :dot])
+elabels_fontsize = 80
+nlabels_fontsize = 80
+node_size = 30.0
+
+edge_width_Q = [2.0 for i in 1:ne(g_Q)]
+arrow_size_Q = [20.0 for i in 1:ne(g_Q)]
+node_labels_Q = repr.(1:nv(g_Q))
+node_labels_Q = ["Negative Wing", "Origin", "Positive Wing"]
+
+
+p_Q = graphplot!(ax_Q, g_Q, elabels=elabels, elabels_color=elabels_color,
+    elabels_fontsize=elabels_fontsize, edge_color=edge_color_Q,
+    edge_width=edge_width_Q, node_color=node_color,
+    arrow_size=arrow_size_Q, node_size=node_size,
+    nlabels=node_labels_Q, nlabels_fontsize=nlabels_fontsize)
+display(fig)
+
+hidedecorations!(ax_Q)
