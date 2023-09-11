@@ -45,6 +45,7 @@ ht_12 = [[ht1[i]..., ht2[i]...] for i in 1:400]
 
 Q = mean(Q)
 p = steady_state(Q)
+index_ordering = reverse(sortperm(p)) # order indices by probability
 close(hfile)
 close(hfile2)
 ##

@@ -60,7 +60,7 @@ ms = [1, 2, 3, 1, 2]
 ss = 1
 ms_seed = Int.([ones(ss)...,  (2 * ones(ss))..., (3 * ones(ss))...])
 ms = Int64[]
-for i in 1:20
+for i in 1:200
     [push!(ms, ms_seed[i]) for i in eachindex(ms_seed)]
 end
 # ms = [ms..., 1]
@@ -83,7 +83,7 @@ end
 
 
 E = zeros(maximum(ms), length(ms))
-[E[ms[i], i] = 1 for i in 1:length(ms)]
+[E[ms[i], i] = 1 for i in 1:length(ms)] # one hot encoding
 E⁺ = pinv(E)
 # E⁺[1, :] .= 0
 E⁺[end, :] .= 0 
@@ -124,9 +124,17 @@ U1, Σ, U2 = svd(Gnh * Y * X' * Gnh)
 U1 * Diagonal(Σ) * U2' - Gnh * Y * X' * Gnh
 Pmpdmd = (Gnh * U2 * U1' * Gh)'
 p = steady_state(Qmch)
-Punitary = exp(log(Pmch)  -Diagonal(p) *log(Pmch)' * inv(Diagonal(p))/2)
+Punitary = exp(log(Pmch)/2  -Diagonal(p) *log(Pmch)' * inv(Diagonal(p))/2)
 
 
 eigen(Qmch)
 eigen((Qmch  -Diagonal(p) *Qmch' * inv(Diagonal(p)))/2)
 Pim = exp((Qmch  -Diagonal(p) *Qmch' * inv(Diagonal(p)))/2)
+##
+Edelya = zeros(2*maximum(ms), length(ms)-1)
+Edelya[1:3, 1:end] .= E[:, 1:end-1]
+Edelya[4:end, 1:end] .= E[:, 2:end]
+X = Edelya[:, 1:end-1]
+Y = Edelya[:, 2:end]
+Pdmd = Y * pinv(X)
+##
