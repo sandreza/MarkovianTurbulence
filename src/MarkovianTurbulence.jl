@@ -54,8 +54,8 @@ function (embedding::StateEmbeddingParallel)(current_state)
     argmin(embedding.distances)
 end
 
-using MarkovChainHammer
-using MarkovChainHammer.TransitionMatrix: steady_state
+# using MarkovChainHammer
+# using MarkovChainHammer.TransitionMatrix: steady_state
 export symmetrize 
 
 
