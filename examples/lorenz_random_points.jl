@@ -23,7 +23,7 @@ end
 n_markov_states = 128
 skip = round(Int, subdiv / n_markov_states)
 markov_states_random = [timeseries[:, i] for i in 1:skip:subdiv]
-numstates = length(markov_states)
+numstates = length(markov_states_random)
 
 scatter(timeseries[:,  1:skip:subdiv])
 ##
@@ -53,6 +53,7 @@ markov_chain_random = copy(markov_chain)
 ## construct transition matrix
 Q = generator(markov_chain; dt=dt)
 p = steady_state(Q)
+p_random = copy(p)
 
 ##
 reaction_coordinates = [u -> u[i] for i in 1:3] # define anonymous functions for reaction coordinates
@@ -60,7 +61,7 @@ markovs = []
 rtimeseriess = []
 for i in ProgressBar(1:3)
     current_reaction_coordinate = reaction_coordinates[i]
-    markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states]
+    markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states_random]
     rtimeseries = [current_reaction_coordinate(timeseries[:, i]) for i in 1:iterations]
     push!(markovs, markov)
     push!(rtimeseriess, rtimeseries)
@@ -137,7 +138,7 @@ reaction_coordinates = [u -> u[i] for i in 1:3] # define anonymous functions for
 # reaction_coordinates = [reaction_coordinates..., u -> u[1] > 0, u -> u[2] > 0, u -> u[3] > 5]
 # labels = [labels..., "ℰ(s)==1", "sign(x)", "ℰ(s)==2"]
 labels = ["g¹", "g²", "g³", "g⁴", "g⁵", "g⁶"]
-reaction_coordinates = [reaction_coordinates..., u -> argmin([norm(u - markov_state) for markov_state in markov_states]) == 1, u -> sign(u[1]), u -> argmin([norm(u - markov_state) for markov_state in markov_states]) == 2]
+reaction_coordinates = [reaction_coordinates..., u -> argmin([norm(u - markov_state) for markov_state in markov_states_random]) == 1, u -> sign(u[1]), u -> argmin([norm(u - markov_state) for markov_state in markov_states_random]) == 2]
 
 kwargs = (; ylabel="Autocorrelation", titlesize=50, ylabelsize=40,
     xgridstyle=:dash, ygridstyle=:dash, ygridwidth=5, xgridwidth=5, xtickalign=1,
@@ -146,13 +147,13 @@ kwargs = (; ylabel="Autocorrelation", titlesize=50, ylabelsize=40,
 
 # ctep = ContinuousTimeEmpiricalProcess(markov_chain)
 # generated_chain = generate(ctep, 10^4, markov_chain[1])
-
+random_auto = []
 axs = []
 for i in ProgressBar(1:6)
     current_reaction_coordinate = reaction_coordinates[i]
     subfig = subfigs[i]
 
-    markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states]
+    markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states_random]
     iterations_used = floor(Int, iterations / 100)
     rtimeseries = [current_reaction_coordinate(timeseries[:, i]) for i in 1:iterations_used]
 
@@ -166,7 +167,7 @@ for i in ProgressBar(1:6)
 
     auto_correlation_snapshots = zeros(total)
 
-    markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states]
+    markov = [current_reaction_coordinate(markov_state) for markov_state in markov_states_random]
 
     Pτ = perron_frobenius_1 * 0 + I
     for i in 0:total-1
@@ -176,6 +177,7 @@ for i in ProgressBar(1:6)
     auto_correlation_snapshots .= auto_correlation_snapshots .- sum(markov .* p)^2
     auto_correlation_snapshots .*= 1.0 / auto_correlation_snapshots[1]
 
+    push!(random_auto, auto_correlation_snapshots)
 
     ax1 = Axis(subfig[1, 1]; title="  " * labels[i], kwargs...)
     l1 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_timeseries[:], color=:black, label="Timeseries", linewidth=7)
@@ -209,22 +211,32 @@ for i in 1:3
     end
 end
 
+for i in 1:3
+    for j in i:3
+        for k in j:3
+            push!(observables, u -> u[i] * u[j] * u[k])
+            push!(labels, primitive_labels[i] * primitive_labels[j] * primitive_labels[k])
+        end
+    end
+end
+
 for i in eachindex(labels)
     g = observables[i]
-    g_ensemble = sum(g.(markov_states) .* p)
-    g_temporal = mean([g(timeseries[:, i]) for i in 1:iterations])
+    g_ensemble = sum(g.(markov_states_random) .* p_random)
+    # g_temporal = mean([g(timeseries[:, i]) for i in 1:iterations])
     println(" ensemble: ⟨$(labels[i])⟩ = $g_ensemble")
-    println(" temporal: ⟨$(labels[i])⟩ = $g_temporal")
+    # println(" temporal: ⟨$(labels[i])⟩ = $g_temporal")
     println("--------------------------------------------")
 end
 
+#=
 observable(u) = u[1] * u[2] * u[3] # ⟨xyz⟩ triple correlation
 # ensemble and temporal average
-g_ensemble = sum(observable.(markov_states) .* p)
+g_ensemble = sum(observable.(markov_states_random) .* p)
 g_temporal = mean([observable(timeseries[:, i]) for i in 1:iterations])
 println("The ensemble average   ⟨xyz⟩  is $(g_ensemble)")
 println("The timeseries average ⟨xyz⟩  is $(g_temporal)")
-
+=#
 ##
 inds= 1:100:iterations
 fig = Figure(resolution=(1500, 1000))
@@ -244,9 +256,9 @@ end
 cmapa = RGBAf.(to_colormap(:glasbey_hv_n256))
 colors = [(cmapa[markov_chain[i]], 0.5) for i in inds]
 for (i, ax) in enumerate(axs)
-    scatter!(ax, Tuple.(markov_states), color=:black, markersize=10.0)
+    scatter!(ax, Tuple.(markov_states_random), color=:black, markersize=10.0)
     scatter!(ax, timeseries[:, inds] , color=colors, markersize = 5.0)
-    scatter!(ax, Tuple.(markov_states), color=:black, markersize=10.0)
+    scatter!(ax, Tuple.(markov_states_random), color=:black, markersize=10.0)
     rotate_cam!(ax.scene, (0, θ₀ + (i-1) * δ, 0))
 end
 display(fig)
