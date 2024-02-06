@@ -43,3 +43,19 @@ ax = Axis(fig[1,2])
 scatter!(ax, real(Λₙ), imag(Λₙ), color = (:red, op), markersize = ms)
 scatter!(ax, real(λₙ), imag(λₙ), color = (:blue, op), markersize = ms)
 display(fig)
+##
+function arctan(y, x)
+    if y ≥ 0
+        atan(y, x)
+    else
+        atan(y, x) + 2π
+    end   
+end
+## 
+M = 4
+Δt = 2π/M
+ts = Δt * collect(0:M) 
+xs = cos.(ts)
+ys = sin.(ts)
+C(x,y) = (round(Int, arctan(y, x) / 2π * M))% M + 1
+C.(xs, ys)
