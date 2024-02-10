@@ -234,6 +234,28 @@ for i in eachindex(labels)
 end
 
 #=
+gs_random = zeros(length(observables))
+for i in eachindex(labels)
+    g = observables[i]
+    g_ensemble = sum(g.(markov_states_ab) .* p_ab)
+    println(g_ensemble)
+    gs_random[i] = g_ensemble
+end
+gs_random[1:9]'
+gs_random[11:end]'
+gs_random = zeros(length(observables))
+for i in eachindex(labels)
+    g = observables[i]
+    g_ensemble = sum(g.(markov_states_random) .* p_random)
+    println(g_ensemble)
+    gs_random[i] = g_ensemble
+end
+gs_random[1:9]'
+gs_random[11:end]'
+=#
+
+
+#=
 observable(u) = u[1] * u[2] * u[3] # ⟨xyz⟩ triple correlation
 # ensemble and temporal average
 g_ensemble = sum(observable.(markov_states_ab) .* p)

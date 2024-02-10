@@ -1,6 +1,6 @@
 using GLMakie
 using MarkovChainHammer, MarkovianTurbulence
-
+using LaTeXStrings
 using ProgressBars, LinearAlgebra, Statistics, Random
 
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, steady_state, perron_frobenius
@@ -120,6 +120,7 @@ reaction_coordinates = [u -> u[i] for i in 1:3] # define anonymous functions for
 # reaction_coordinates = [reaction_coordinates..., u -> u[1] > 0, u -> u[2] > 0, u -> u[3] > 5]
 # labels = [labels..., "ℰ(s)==1", "sign(x)", "ℰ(s)==2"]
 labels = ["g¹", "g²", "g³", "g⁴", "g⁵", "g⁶"]
+labels = [L"g^{[1]}", L"g^{[2]}", L"g^{[3]}", L"g^{[4]}", L"g^{[5]}", L"g^{[6]}"]
 reaction_coordinates = [reaction_coordinates..., u -> argmin([norm(u - markov_state) for markov_state in markov_states]) == 1, u -> sign(u[1]), u -> argmin([norm(u - markov_state) for markov_state in markov_states]) == 2]
 
 kwargs = (; ylabel="Autocorrelation", titlesize=50, ylabelsize=40,
@@ -160,7 +161,7 @@ for i in ProgressBar(1:6)
     auto_correlation_snapshots .*= 1.0 / auto_correlation_snapshots[1]
 
 
-    ax1 = Axis(subfig[1, 1]; title="  " * labels[i], kwargs...)
+    ax1 = Axis(subfig[1, 1]; title= labels[i], kwargs...)
     l1 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_timeseries[:], color=:black, label="Timeseries", linewidth=7)
     l2 = lines!(ax1, dt .* collect(0:total-1), auto_correlation_snapshots[:], color=(:purple, 0.5), label="Generator", linewidth=7)
     # autocorrelation_perron_frobenius = autocovariance(markov, Ps, 79)
@@ -224,7 +225,7 @@ fig = Figure(resolution=(1500, 1000))
 embedding_fig = fig[2, 1] = GridLayout()
 dynamics_fig = fig[1, 1] = GridLayout()
 
-ax = Axis(embedding_fig[1, 1]; title="Markov Chain Embedding", xlabel="Time", ylabel="Partition", options2...)
+ax = Axis(embedding_fig[1, 1]; title="Partition Dynamics", xlabel="Time", ylabel="Cell", options2...)
 scatter!(ax, tlist[1:nsteps], markov_chain[1:nsteps], color=colorlist)
 ax.yticks = ([1, 2, 3], ["Left Wing", "Origin", "Right Wing"])
 
