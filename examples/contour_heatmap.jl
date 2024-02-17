@@ -5,12 +5,11 @@ function contour_heatmap!(ax, ϕ, p_coord, slice_zonal, contour_levels, colorran
 # Description 
 Combines a contour plot with a heatmap and adds numbers to the contours.
 """
-function contour_heatmap!(ax, ϕ, p_coord, slice_zonal, contour_levels, colorrange;
-    add_labels=false, colormap=:balance,
-    heuristic=1, random_seed=12345, labelsize = 40, markersize = 25)
-
-    cplot = contour!(ax, ϕ, p_coord, slice_zonal, levels=contour_levels, color=:black, interpolate=true)
-    hm = heatmap!(ax, ϕ, p_coord, slice_zonal, colorrange=colorrange, colormap=colormap, interpolate=true)
+function contour_heatmap!(ax, ϕ, p_coord, slice_zonal, contour_levels, colorrange; colormap=:balance, labelsize = 40, markersize = 25)
+# add_labels=false,  heuristic=1, random_seed=12345, labelsize = 40, markersize = 25)
+    
+    hm = heatmap!(ax, ϕ, p_coord, slice_zonal; levels=contour_levels, interpolate = true, colorrange=colorrange, colormap=colormap, labelsize = labelsize)
+    cplot = contour!(ax, ϕ, p_coord, slice_zonal; levels=contour_levels, color=:black, labelsize = markersize, labels = true )
 
     ax.limits = (extrema(ϕ)..., extrema(p_coord)...)
 
@@ -27,6 +26,7 @@ function contour_heatmap!(ax, ϕ, p_coord, slice_zonal, contour_levels, colorran
     ax.yreversed = true
 
     # hack 
+    #=
     Random.seed!(random_seed)
     if add_labels
         list_o_stuff = []
@@ -83,4 +83,5 @@ function contour_heatmap!(ax, ϕ, p_coord, slice_zonal, contour_levels, colorran
             end
         end
     end # end of adding labels
+    =#
 end

@@ -38,7 +38,6 @@ time_in_days = (0:length(markov_embedding_2)-1) .* dt_days
 # prior distribution is 1 exit and means Δt
 prior = GeneratorParameterDistributions(400; α=1, β=dt_days, αs=ones(399) * 1e-4)
 Q = BayesianGenerator(markov_embedding_2, prior; dt=dt_days)
-Q = BayesianGenerator(markov_embedding_2_2, Q.posterior; dt=dt_days)
 ht1 = holding_times(markov_embedding_2, dt=dt_days)
 ht2 = holding_times(markov_embedding_2_2, dt=dt_days)
 ht_12 = [[ht1[i]..., ht2[i]...] for i in 1:400]
@@ -148,75 +147,4 @@ for (ii,i) in enumerate([0, 2, 4, 6])
 end
 display(fig)
 ##
-save("held_suarez_temperature_koopman_mode_amplitudes.png", fig)
-##
-zonal_state2 = mean(uzonal, dims=1)[1, :, :]
-pressure = read(hfile["pressure 1"])[1, 90, :]
-##
-fig = Figure()
-ax1 = Axis(fig[1,1]; title = "Ensemble Average")
-ax2 = Axis(fig[1,2]; title = "Time Average")
-ax3 = Axis(fig[1, 3]; title = "Difference")
-heatmap!(ax1, ϕlist, -pressure, zonal_state, colormap=:balance, colorrange=(-30, 30), interpolate = true)
-heatmap!(ax2, ϕlist, -pressure, zonal_state2, colormap=:balance, colorrange=(-30, 30), interpolate=true)
-heatmap!(ax3, ϕlist, -pressure, zonal_state2-zonal_state, colormap=:balance, colorrange=(-5, 5), interpolate=true)
-display(fig)
-##
-using Random
-include("contour_heatmap.jl")
-##
-contour_levels = collect(-8:4:28)
-fig = Figure(resolution=(3000, 1000))
-latitudes = ϕlist / π * 180 .- 90
-labelsize = 50
-markersize = 25
-ax1 = Axis(fig[1,1]; title = "Ensemble Average", titlesize = 40)
-contour_heatmap!(ax1, latitudes, pressure, zonal_state, contour_levels, (-40, 40); colormap=:balance, labelsize = labelsize, markersize = markersize)
-ax2 = Axis(fig[1, 2]; title="Time Average", titlesize = 40)
-contour_heatmap!(ax2, latitudes, pressure, zonal_state2, contour_levels, (-40, 40); colormap=:balance, labelsize = labelsize, markersize = markersize)
-ax3 = Axis(fig[1, 3]; title="Difference", titlesize = 40)
-contour_levels_Δ = collect(1:0.25:3)
-contour_heatmap!(ax3, latitudes, pressure, abs.(zonal_state2 - zonal_state), contour_levels_Δ, (0, 4); colormap=:thermometer, labelsize = labelsize, markersize = markersize)
-hideydecorations!(ax2)
-hideydecorations!(ax3)
-display(fig)
-
-##
-save("held_suarez_ensemble_average_zonal_wind.png", fig)
-
-
-##
-#=
-paraboloid = (x, y) -> 10(x^2 + y^2)
-x = range(-3, 3; length = 100)
-y = range(-3, 3; length = 200)
-z = paraboloid.(x, y')
-
-fig, ax, hm = heatmap(x, y, z; interpolate = true)
-Colorbar(fig[1, 2], hm)
-
-contour!(
-    ax, x, y, z;
-    color = :red, levels = 0:10:100, labels = true,
-    labelsize = 15, labelfont = :bold, labelcolor = :orange
-)
-fig
-
-##
-fig = Figure() 
-ax = Axis(fig[1,1])
-heatmap!(ax, latitudes, pressure, zonal_state; colormap = :balance, colorrange = (-40,40), interpolate = true, levels = contour_levels)
-contour!(ax, latitudes, pressure, zonal_state; levels=contour_levels, color=:black, labels = true, labelsize = 25, labelfont = :bold)
-ax.xlabel = "Latitude [ᵒ]"
-ax.ylabel = "Stretched Height"
-ax.xlabelsize = labelsize
-ax.ylabelsize = labelsize
-ax.xticklabelsize = labelsize
-ax.yticklabelsize = labelsize
-
-ax.xticks = ([-75, -50, -25, 0, 25, 50, 75], ["75S", "50S", "25S", "0", "25N", "50N", "75N"])
-pressure_levels = [1000, 850, 700, 550, 400, 250, 100, 10]
-ax.yticks = (pressure_levels .* 1e2, string.(pressure_levels))
-ax.yreversed = true
-display(fig)
-=#
+save("held_suarez_temperature_koopman_mode_first_half.png", fig)

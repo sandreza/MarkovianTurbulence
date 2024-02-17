@@ -142,7 +142,7 @@ save("held_suarez_random_entries_n" * string(nstates) * ".png", fig)
 
 ##
 eigenvalue_indices = 1:2:18
-observables = [Λ -> real(-1 / Λ[end-i]) for i in eigenvalue_indices]
+observables = [Λ -> -1 / real(Λ[end-i]) for i in eigenvalue_indices]
 obs = [zeros(Nrandom_arrays) for i in 1:9, j in 1:3]
 Qs = [Q1, Q2, Qtotal];
 tic = Base.time()
@@ -199,7 +199,7 @@ end
 fig = Figure(resolution=(3000, 1500))
 labelsize = 40
 options = (; xlabel="Days", ylabel="Probability", titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
-titlenames = ["-real(1 / λᵢ) for i=" * string(i + 1) for i in eigenvalue_indices]
+titlenames = ["-1 / real(λᵢ) for i=" * string(i + 1) for i in eigenvalue_indices]
 # https://docs.makie.org/v0.19/api/index.html#Axis 
 # https://juliagraphics.github.io/Colors.jl/latest/namedcolors/
 time_pdf_colors = [:gold4, :orchid, :black]
