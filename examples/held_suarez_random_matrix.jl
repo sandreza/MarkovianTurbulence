@@ -2,7 +2,7 @@ using HDF5, Statistics, MarkovianTurbulence, ProgressBars
 using MarkovChainHammer, LinearAlgebra, GLMakie, Random
 using MarkovChainHammer.BayesianMatrix
 import MarkovChainHammer.TransitionMatrix: generator, holding_times, perron_frobenius
-import MarkovChainHammer.TransitionMatrix: steady_state, entropy
+import MarkovChainHammer.TransitionMatrix: steady_state
 import MarkovChainHammer.Utils: histogram
 
 #=
@@ -50,7 +50,7 @@ Q21 = BayesianGenerator(markov_chain_2, Q1.posterior; dt=dt_days)
 Q = mean(Q21)
 mean_holding_time = [-1 / Q[i, i] for i in eachindex(unordered_p)]
 p = steady_state(Q)
-entropy(p)
+scaled_entropy(p)
 connectivity_out = sum(Q .> eps(100.0), dims=1)
 connectivity_in = sum(Q .> eps(100.0), dims=2)
 Λ, V = eigen(Q)

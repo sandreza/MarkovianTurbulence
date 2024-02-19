@@ -110,7 +110,7 @@ heatmap!(ax2, ϕlist, -pressure, imag.(zonal_state2), colormap=:balance, colorra
 λ = collect(θlist) / 2π * 360
 ϕ = ϕlist / π * 180 .- 90
 
-field_index = 3 # 1: u, 2: v, 3: w, 4: p, 5: T
+field_index = 5# 1: u, 2: v, 3: w, 4: p, 5: T
 labelsize = 40
 fig = Figure(resolution=(2700, 1400); )
 markov_indices = [1, 10, 100, 400]
