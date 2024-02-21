@@ -53,6 +53,7 @@ connectivity_in = sum(Q .> 1e-4, dims=2)[index_ordering]
 Λ, V = eigen(Q)
 timescales = -1 ./ real.(Λ)
 imtimescales_bool = abs.(imag.(Λ)) .> eps(1e8)
+imtimescales = 1 ./ imag.(Λ[imtimescales_bool]) * 2π
 time_in_days = (0:length(markov_embedding_2)-1) .* dt_days
 close(hfile1)
 close(hfile2)
@@ -89,6 +90,22 @@ ylims!(ax22, 0, 1.5)
 display(fig)
 ##
 save("held_suarez_generator_properties_" * string(length(p)) * ".png", fig)
+
+##
+fig = Figure(resolution=(2 * 1400, 2 * 900))
+labelsize = 40
+options = (; titlesize=labelsize, ylabelsize=labelsize, xlabelsize=labelsize, xticklabelsize=labelsize, yticklabelsize=labelsize)
+
+ax11 = Axis(fig[1, 1]; title="Oscillatory Timescales", ylabel="Time [days]", xlabel="Eigenvalue Index", options...)
+colors = [:blue for i in 1:400]
+# colors[imtimescales[1:end-1]] .= :red
+# colors = reverse(colors)
+colors[1:8] .= :red
+scatter!(ax11, collect(1:length(timescales))[imtimescales_bool], abs.(reverse(imtimescales)), color=colors[imtimescales_bool], markersize=20.0)
+display(fig)
+extrema(abs.(reverse(imtimescales)))
+##
+save("held_suarez_generator_oscillatory_timescales_" * string(length(p)) * ".png", fig)
 ##
 # Holding times
 ht = ht_12
